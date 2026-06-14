@@ -22,7 +22,8 @@ import {
   Scale,
   Sun,
   Moon,
-  Info
+  Info,
+  ShieldAlert
 } from 'lucide-react';
 
 // --- MOCK INITIAL DATA ---
@@ -36,12 +37,23 @@ const INITIAL_PETS = [
     photo: '', // Base64 or empty for placeholder avatar
     notes: 'Very energetic, allergic to chicken.',
     weightLogs: [
-      { date: '2024-01-15', weight: 12.5 },
-      { date: '2024-02-15', weight: 15.2 },
-      { date: '2024-03-15', weight: 18.0 },
-      { date: '2024-04-15', weight: 21.4 },
-      { date: '2024-05-15', weight: 24.8 },
-      { date: '2024-06-12', weight: 27.5 }
+      { date: '2025-06-10', weight: 22.0 },
+      { date: '2025-07-12', weight: 22.5 },
+      { date: '2025-08-15', weight: 23.1 },
+      { date: '2025-09-11', weight: 23.8 },
+      { date: '2025-10-14', weight: 24.2 },
+      { date: '2025-11-12', weight: 24.9 },
+      { date: '2025-12-10', weight: 25.3 },
+      { date: '2026-01-15', weight: 25.8 },
+      { date: '2026-02-12', weight: 26.2 },
+      { date: '2026-03-14', weight: 26.7 },
+      { date: '2026-04-16', weight: 27.1 },
+      { date: '2026-05-15', weight: 27.4 },
+      { date: '2026-06-12', weight: 27.8 }
+    ],
+    vaccineLogs: [
+      { id: 'v1', date: '2025-06-15', vaccineName: 'DHPP Core Vaccine', brand: 'Nobivac', notes: 'First booster given' },
+      { id: 'v2', date: '2026-06-05', vaccineName: 'Rabies Vaccine', brand: 'Defensor 3', notes: 'Annual renewal' }
     ]
   },
   {
@@ -53,53 +65,116 @@ const INITIAL_PETS = [
     photo: '',
     notes: 'Loves sleeping in boxes. Regular dental checkup recommended.',
     weightLogs: [
-      { date: '2024-03-10', weight: 1.2 },
-      { date: '2024-04-10', weight: 2.1 },
-      { date: '2024-05-10', weight: 3.5 },
-      { date: '2024-06-10', weight: 4.2 }
+      { date: '2025-06-10', weight: 3.8 },
+      { date: '2025-07-12', weight: 3.9 },
+      { date: '2025-08-15', weight: 4.1 },
+      { date: '2025-09-11', weight: 4.2 },
+      { date: '2025-10-14', weight: 4.2 },
+      { date: '2025-11-12', weight: 4.3 },
+      { date: '2025-12-10', weight: 4.4 },
+      { date: '2026-01-15', weight: 4.5 },
+      { date: '2026-02-12', weight: 4.6 },
+      { date: '2026-03-14', weight: 4.6 },
+      { date: '2026-04-16', weight: 4.7 },
+      { date: '2026-05-15', weight: 4.8 },
+      { date: '2026-06-10', weight: 4.8 }
+    ],
+    vaccineLogs: [
+      { id: 'v3', date: '2025-08-20', vaccineName: 'Feline Leukemia Vaccine', brand: 'Purevax', notes: 'Well tolerated' }
     ]
   }
 ];
 
 const INITIAL_EXPENSES = [
-  { id: 'e1', petId: '1', category: 'Food', amount: 850, date: '2026-06-01', description: 'Premium Kibble 12kg' },
-  { id: 'e2', petId: '2', category: 'Food', amount: 450, date: '2026-06-03', description: 'Wet Canned Food' },
-  { id: 'e3', petId: '1', category: 'Medical', amount: 1200, date: '2026-06-05', description: 'Vaccination Booster' },
-  { id: 'e4', petId: '2', category: 'Toys', amount: 350, date: '2026-06-08', description: 'Cat Tree Accessory' },
-  { id: 'e5', petId: '1', category: 'Grooming', amount: 600, date: '2026-06-10', description: 'Full Bath & Cut' },
-  { id: 'e6', petId: '2', category: 'Litter', amount: 280, date: '2026-06-12', description: 'Tofu Litter 6L' }
+  // Luna Food (Monthly)
+  { id: 'e_l1', petId: '1', category: 'Food', amount: 850, date: '2025-06-05', description: 'Premium Kibble 12kg' },
+  { id: 'e_l2', petId: '1', category: 'Food', amount: 850, date: '2025-07-05', description: 'Premium Kibble 12kg' },
+  { id: 'e_l3', petId: '1', category: 'Food', amount: 850, date: '2025-08-05', description: 'Premium Kibble 12kg' },
+  { id: 'e_l4', petId: '1', category: 'Food', amount: 850, date: '2025-09-05', description: 'Premium Kibble 12kg' },
+  { id: 'e_l5', petId: '1', category: 'Food', amount: 850, date: '2025-10-05', description: 'Premium Kibble 12kg' },
+  { id: 'e_l6', petId: '1', category: 'Food', amount: 850, date: '2025-11-05', description: 'Premium Kibble 12kg' },
+  { id: 'e_l7', petId: '1', category: 'Food', amount: 850, date: '2025-12-05', description: 'Premium Kibble 12kg' },
+  { id: 'e_l8', petId: '1', category: 'Food', amount: 850, date: '2026-01-05', description: 'Premium Kibble 12kg' },
+  { id: 'e_l9', petId: '1', category: 'Food', amount: 850, date: '2026-02-05', description: 'Premium Kibble 12kg' },
+  { id: 'e_la', petId: '1', category: 'Food', amount: 850, date: '2026-03-05', description: 'Premium Kibble 12kg' },
+  { id: 'e_lb', petId: '1', category: 'Food', amount: 850, date: '2026-04-05', description: 'Premium Kibble 12kg' },
+  { id: 'e_lc', petId: '1', category: 'Food', amount: 850, date: '2026-05-05', description: 'Premium Kibble 12kg' },
+  { id: 'e_ld', petId: '1', category: 'Food', amount: 850, date: '2026-06-05', description: 'Premium Kibble 12kg' },
+
+  // Milo Food (Monthly)
+  { id: 'e_m1', petId: '2', category: 'Food', amount: 450, date: '2025-06-12', description: 'Wet Canned Food (Case)' },
+  { id: 'e_m2', petId: '2', category: 'Food', amount: 450, date: '2025-07-12', description: 'Wet Canned Food (Case)' },
+  { id: 'e_m3', petId: '2', category: 'Food', amount: 450, date: '2025-08-12', description: 'Wet Canned Food (Case)' },
+  { id: 'e_m4', petId: '2', category: 'Food', amount: 450, date: '2025-09-12', description: 'Wet Canned Food (Case)' },
+  { id: 'e_m5', petId: '2', category: 'Food', amount: 450, date: '2025-10-12', description: 'Wet Canned Food (Case)' },
+  { id: 'e_m6', petId: '2', category: 'Food', amount: 450, date: '2025-11-12', description: 'Wet Canned Food (Case)' },
+  { id: 'e_m7', petId: '2', category: 'Food', amount: 450, date: '2025-12-12', description: 'Wet Canned Food (Case)' },
+  { id: 'e_m8', petId: '2', category: 'Food', amount: 450, date: '2026-01-12', description: 'Wet Canned Food (Case)' },
+  { id: 'e_m9', petId: '2', category: 'Food', amount: 450, date: '2026-02-12', description: 'Wet Canned Food (Case)' },
+  { id: 'e_ma', petId: '2', category: 'Food', amount: 450, date: '2026-03-12', description: 'Wet Canned Food (Case)' },
+  { id: 'e_mb', petId: '2', category: 'Food', amount: 450, date: '2026-04-12', description: 'Wet Canned Food (Case)' },
+  { id: 'e_mc', petId: '2', category: 'Food', amount: 450, date: '2026-05-12', description: 'Wet Canned Food (Case)' },
+  { id: 'e_md', petId: '2', category: 'Food', amount: 450, date: '2026-06-12', description: 'Wet Canned Food (Case)' },
+
+  // Medical
+  { id: 'e_med1', petId: '1', category: 'Medical', amount: 1200, date: '2025-06-15', description: 'Annual DHPP Vaccination' },
+  { id: 'e_med2', petId: '2', category: 'Medical', amount: 800, date: '2025-08-20', description: 'Feline Leukemia Vaccine & Checkup' },
+  { id: 'e_med3', petId: '1', category: 'Medical', amount: 1500, date: '2025-12-05', description: 'Dental Scaling & Polish' },
+  { id: 'e_med4', petId: '2', category: 'Medical', amount: 900, date: '2026-02-18', description: 'Deworming & Ear Mite Treatment' },
+  { id: 'e_med5', petId: '1', category: 'Medical', amount: 1200, date: '2026-06-05', description: 'Annual Booster Vaccine' },
+
+  // Grooming (Every 2-3 months)
+  { id: 'e_gr1', petId: '1', category: 'Grooming', amount: 600, date: '2025-07-20', description: 'Summer Spa & De-shedding' },
+  { id: 'e_gr2', petId: '1', category: 'Grooming', amount: 600, date: '2025-10-15', description: 'Nail Trim & De-shedding' },
+  { id: 'e_gr3', petId: '1', category: 'Grooming', amount: 600, date: '2026-01-20', description: 'Winter Grooming & Ear Cleaning' },
+  { id: 'e_gr4', petId: '1', category: 'Grooming', amount: 600, date: '2026-04-15', description: 'Spring Trim & Spa' },
+  { id: 'e_gr5', petId: '2', category: 'Grooming', amount: 400, date: '2025-11-02', description: 'Milo Claws & Bath' },
+
+  // Litter for Milo
+  { id: 'e_lit1', petId: '2', category: 'Litter', amount: 280, date: '2025-07-02', description: 'Tofu Litter 6L' },
+  { id: 'e_lit2', petId: '2', category: 'Litter', amount: 280, date: '2025-09-02', description: 'Tofu Litter 6L' },
+  { id: 'e_lit3', petId: '2', category: 'Litter', amount: 280, date: '2025-11-02', description: 'Tofu Litter 6L' },
+  { id: 'e_lit4', petId: '2', category: 'Litter', amount: 280, date: '2026-01-02', description: 'Tofu Litter 6L' },
+  { id: 'e_lit5', petId: '2', category: 'Litter', amount: 280, date: '2026-03-02', description: 'Tofu Litter 6L' },
+  { id: 'e_lit6', petId: '2', category: 'Litter', amount: 280, date: '2026-05-02', description: 'Tofu Litter 6L' },
+
+  // Toys & Other
+  { id: 'e_t1', petId: '1', category: 'Toys', amount: 500, date: '2025-07-05', description: 'Chew Toys & Rope' },
+  { id: 'e_t2', petId: '2', category: 'Toys', amount: 1200, date: '2025-10-10', description: 'Multi-level Cat Tree' },
+  { id: 'e_t3', petId: '1', category: 'Toys', amount: 750, date: '2025-12-24', description: 'Christmas Outfits & Treats' },
+  { id: 'e_t4', petId: '2', category: 'Toys', amount: 350, date: '2026-03-15', description: 'Interactive Laser & Feathers' }
 ];
 
 const INITIAL_REMINDERS = [
-  { id: 'r1', petId: '1', type: 'Vaccine', title: 'Rabies Booster', date: '2026-06-18', time: '10:00', recurrence: 'none', completed: false },
-  { id: 'r2', petId: '2', type: 'Medication', title: 'Deworming Tablet', date: '2026-06-20', time: '09:00', recurrence: 'monthly', completed: false },
-  { id: 'r3', petId: '1', type: 'Grooming', title: 'Nail Clipping', date: '2026-06-15', time: '15:30', recurrence: 'none', completed: false },
-  { id: 'r4', petId: '2', type: 'Checkup', title: 'Annual Vet Visit', date: '2026-07-02', time: '11:00', recurrence: 'yearly', completed: false }
+  { id: 'r1', petId: '1', type: 'Vaccine', title: 'Annual Booster Vaccine', date: '2026-06-25', time: '10:00', recurrence: 'yearly', completed: false },
+  { id: 'r2', petId: '2', type: 'Medication', title: 'Monthly Deworming', date: '2026-06-20', time: '09:00', recurrence: 'monthly', completed: false },
+  { id: 'r3', petId: '1', type: 'Grooming', title: 'Spa & Nail Trim', date: '2026-06-28', time: '15:30', recurrence: 'none', completed: false },
+  { id: 'r4', petId: '2', type: 'Checkup', title: 'Annual Vet Visit', date: '2026-08-15', time: '11:00', recurrence: 'yearly', completed: false }
 ];
 
 export default function App() {
   const [pets, setPets] = useState(() => {
-    const saved = localStorage.getItem('pawsome_pets');
+    const saved = localStorage.getItem('pawfecto_pets') || localStorage.getItem('pawsome_pets');
     return saved ? JSON.parse(saved) : INITIAL_PETS;
   });
 
   const [expenses, setExpenses] = useState(() => {
-    const saved = localStorage.getItem('pawsome_expenses');
+    const saved = localStorage.getItem('pawfecto_expenses') || localStorage.getItem('pawsome_expenses');
     return saved ? JSON.parse(saved) : INITIAL_EXPENSES;
   });
 
   const [reminders, setReminders] = useState(() => {
-    const saved = localStorage.getItem('pawsome_reminders');
+    const saved = localStorage.getItem('pawfecto_reminders') || localStorage.getItem('pawsome_reminders');
     return saved ? JSON.parse(saved) : INITIAL_REMINDERS;
   });
 
   const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('pawsome_theme');
+    const saved = localStorage.getItem('pawfecto_theme') || localStorage.getItem('pawsome_theme');
     return saved || 'light';
   });
 
   const [currency, setCurrency] = useState(() => {
-    return localStorage.getItem('pawsome_currency') || 'THB';
+    return localStorage.getItem('pawfecto_currency') || localStorage.getItem('pawsome_currency') || 'THB';
   });
 
   const CURRENCIES = {
@@ -113,6 +188,11 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedPetId, setSelectedPetId] = useState('all');
+  const [timeframe, setTimeframe] = useState('month'); // 'week' | 'month' | 'year' | 'specific' | 'custom'
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [specificDate, setSpecificDate] = useState('');
+  const [weightSort, setWeightSort] = useState('date-desc'); // 'date-desc' | 'date-asc' | 'weight-desc' | 'weight-asc'
 
   // Modal states
   const [showPetModal, setShowPetModal] = useState(false);
@@ -120,17 +200,22 @@ export default function App() {
   
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
+  const [editingWeight, setEditingWeight] = useState(null);
 
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null);
 
   const [showWeightModal, setShowWeightModal] = useState(false);
+  
+  const [showVaccineModal, setShowVaccineModal] = useState(false);
+  const [editingVaccine, setEditingVaccine] = useState(null);
 
   // Form states
   const [petForm, setPetForm] = useState({ name: '', species: 'Dog', breed: '', birthdate: '', notes: '', photo: '' });
   const [expenseForm, setExpenseForm] = useState({ petId: '', category: 'Food', amount: '', date: '', description: '' });
   const [reminderForm, setReminderForm] = useState({ petId: '', type: 'Vaccine', title: '', date: '', time: '09:00', recurrence: 'none' });
   const [weightForm, setWeightForm] = useState({ petId: '', date: '', weight: '' });
+  const [vaccineForm, setVaccineForm] = useState({ petId: '', date: '', vaccineName: '', brand: '', notes: '' });
 
   // Notifications / Feedback toasts
   const [toast, setToast] = useState(null);
@@ -145,7 +230,7 @@ export default function App() {
     // 1. Native Desktop Notification
     if ('Notification' in window && Notification.permission === 'granted') {
       try {
-        new Notification('Pawsome Reminder 🐾', {
+        new Notification('Pawfecto Reminder 🐾', {
           body: message,
           icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐾</text></svg>'
         });
@@ -256,24 +341,24 @@ export default function App() {
   }, [reminders, pets]);
 
   useEffect(() => {
-    localStorage.setItem('pawsome_pets', JSON.stringify(pets));
+    localStorage.setItem('pawfecto_pets', JSON.stringify(pets));
   }, [pets]);
 
   useEffect(() => {
-    localStorage.setItem('pawsome_expenses', JSON.stringify(expenses));
+    localStorage.setItem('pawfecto_expenses', JSON.stringify(expenses));
   }, [expenses]);
 
   useEffect(() => {
-    localStorage.setItem('pawsome_reminders', JSON.stringify(reminders));
+    localStorage.setItem('pawfecto_reminders', JSON.stringify(reminders));
   }, [reminders]);
 
   useEffect(() => {
-    localStorage.setItem('pawsome_theme', theme);
+    localStorage.setItem('pawfecto_theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
   useEffect(() => {
-    localStorage.setItem('pawsome_currency', currency);
+    localStorage.setItem('pawfecto_currency', currency);
   }, [currency]);
 
   const showFeedback = (message, type = 'success') => {
@@ -369,7 +454,8 @@ export default function App() {
         birthdate: petForm.birthdate,
         notes: sanitizedNotes,
         photo: petForm.photo,
-        weightLogs: []
+        weightLogs: [],
+        vaccineLogs: []
       };
       setPets([...pets, newPet]);
       showFeedback(`Added ${sanitizedName} to your family!`);
@@ -400,6 +486,18 @@ export default function App() {
     setShowExpenseModal(true);
   };
 
+  const openEditExpense = (expense) => {
+    setEditingExpense(expense);
+    setExpenseForm({
+      petId: expense.petId,
+      category: expense.category,
+      amount: expense.amount.toString(),
+      date: expense.date,
+      description: expense.description || ''
+    });
+    setShowExpenseModal(true);
+  };
+
   const saveExpense = (e) => {
     e.preventDefault();
     const amountVal = parseFloat(expenseForm.amount);
@@ -425,6 +523,12 @@ export default function App() {
       showFeedback('Expense tracked successfully!');
     }
     setShowExpenseModal(false);
+  };
+
+  const adjustExpense = (amount) => {
+    const currentVal = parseFloat(expenseForm.amount) || 0;
+    const newVal = Math.max(0, currentVal + amount);
+    setExpenseForm(prev => ({ ...prev, amount: Number(newVal.toFixed(2)).toString() }));
   };
 
   const deleteExpense = (id) => {
@@ -540,10 +644,21 @@ export default function App() {
 
   // --- WEIGHT TRACKING ---
   const openAddWeight = () => {
+    setEditingWeight(null);
     setWeightForm({
       petId: selectedPetId === 'all' ? (pets[0]?.id || '') : selectedPetId,
       date: new Date().toISOString().split('T')[0],
       weight: ''
+    });
+    setShowWeightModal(true);
+  };
+
+  const openEditWeight = (petId, log) => {
+    setEditingWeight({ petId, ...log });
+    setWeightForm({
+      petId: petId,
+      date: log.date,
+      weight: log.weight.toString()
     });
     setShowWeightModal(true);
   };
@@ -556,27 +671,119 @@ export default function App() {
 
     setPets(pets.map(p => {
       if (p.id === weightForm.petId) {
-        const sortedWeightLogs = [...p.weightLogs, { date: weightForm.date, weight: weightVal }]
+        let nextLogs = [...(p.weightLogs || [])];
+        if (editingWeight) {
+          nextLogs = nextLogs.filter(l => l.date !== editingWeight.date);
+        }
+        nextLogs = [...nextLogs, { date: weightForm.date, weight: weightVal }]
           .sort((a, b) => new Date(a.date) - new Date(b.date));
-        return { ...p, weightLogs: sortedWeightLogs };
-      }
-      return p;
-    }));
-
-    showFeedback('Weight logged successfully!');
-    setShowWeightModal(false);
-  };
-
-  const deleteWeightLog = (petId, logIndex) => {
-    setPets(pets.map(p => {
-      if (p.id === petId) {
-        const nextLogs = [...p.weightLogs];
-        nextLogs.splice(logIndex, 1);
         return { ...p, weightLogs: nextLogs };
       }
       return p;
     }));
+
+    if (editingWeight) {
+      showFeedback('Weight record updated successfully!');
+    } else {
+      showFeedback('Weight logged successfully!');
+    }
+    setShowWeightModal(false);
+    setEditingWeight(null);
+  };
+
+  const adjustWeight = (amount) => {
+    const currentVal = parseFloat(weightForm.weight) || 0;
+    const newVal = Math.max(0, currentVal + amount);
+    setWeightForm(prev => ({ ...prev, weight: Number(newVal.toFixed(2)).toString() }));
+  };
+
+  const deleteWeightLog = (petId, dateStr) => {
+    setPets(pets.map(p => {
+      if (p.id === petId) {
+        return {
+          ...p,
+          weightLogs: (p.weightLogs || []).filter(l => l.date !== dateStr)
+        };
+      }
+      return p;
+    }));
     showFeedback('Weight record deleted.', 'info');
+  };
+
+  // --- VACCINATION LOGGING ---
+  const openAddVaccine = () => {
+    setEditingVaccine(null);
+    setVaccineForm({
+      petId: selectedPetId === 'all' ? (pets[0]?.id || '') : selectedPetId,
+      date: new Date().toISOString().split('T')[0],
+      vaccineName: '',
+      brand: '',
+      notes: ''
+    });
+    setShowVaccineModal(true);
+  };
+
+  const openEditVaccine = (petId, log) => {
+    setEditingVaccine({ petId, ...log });
+    setVaccineForm({
+      petId: petId,
+      date: log.date,
+      vaccineName: log.vaccineName,
+      brand: log.brand || '',
+      notes: log.notes || ''
+    });
+    setShowVaccineModal(true);
+  };
+
+  const saveVaccine = (e) => {
+    e.preventDefault();
+    if (!vaccineForm.petId) return showFeedback('Please select a pet.', 'danger');
+    if (!vaccineForm.vaccineName.trim()) return showFeedback('Please enter vaccine name.', 'danger');
+    if (!vaccineForm.date) return showFeedback('Please specify vaccine date.', 'danger');
+
+    const nameClean = sanitizeInput(vaccineForm.vaccineName);
+    const brandClean = sanitizeInput(vaccineForm.brand);
+    const notesClean = sanitizeInput(vaccineForm.notes);
+
+    setPets(pets.map(p => {
+      if (p.id === vaccineForm.petId) {
+        let nextLogs = [...(p.vaccineLogs || [])];
+        if (editingVaccine) {
+          nextLogs = nextLogs.filter(l => l.id !== editingVaccine.id);
+        }
+        const logData = {
+          id: editingVaccine ? editingVaccine.id : Date.now().toString(),
+          date: vaccineForm.date,
+          vaccineName: nameClean,
+          brand: brandClean,
+          notes: notesClean
+        };
+        nextLogs = [...nextLogs, logData].sort((a, b) => new Date(b.date) - new Date(a.date)); // descending date order for vaccinations
+        return { ...p, vaccineLogs: nextLogs };
+      }
+      return p;
+    }));
+
+    if (editingVaccine) {
+      showFeedback('Vaccination record updated successfully!');
+    } else {
+      showFeedback('Vaccination logged successfully!');
+    }
+    setShowVaccineModal(false);
+    setEditingVaccine(null);
+  };
+
+  const deleteVaccine = (petId, id) => {
+    setPets(pets.map(p => {
+      if (p.id === petId) {
+        return {
+          ...p,
+          vaccineLogs: (p.vaccineLogs || []).filter(l => l.id !== id)
+        };
+      }
+      return p;
+    }));
+    showFeedback('Vaccination record deleted.', 'info');
   };
 
   // --- BACKUP & RESTORE ---
@@ -592,7 +799,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `pawsome_backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `pawfecto_backup_${new Date().toISOString().split('T')[0]}.json`;
     link.click();
     showFeedback('Backup file generated and downloaded successfully!');
   };
@@ -621,7 +828,7 @@ export default function App() {
   };
 
   const resetToFactory = () => {
-    if (confirm('Are you sure you want to reset Pawsome? This will delete all currently saved pet records.')) {
+    if (confirm('Are you sure you want to reset Pawfecto? This will delete all currently saved pet records.')) {
       setPets(INITIAL_PETS);
       setExpenses(INITIAL_EXPENSES);
       setReminders(INITIAL_REMINDERS);
@@ -632,8 +839,73 @@ export default function App() {
 
   // --- COMPUTED DATA FOR RENDER ---
   const currentPet = pets.find(p => p.id === selectedPetId);
-  
-  const filteredExpenses = expenses.filter(e => selectedPetId === 'all' || e.petId === selectedPetId);
+
+  // Safe local date parser to avoid timezone offset bugs
+  const parseLocalDate = (dateStr) => {
+    if (!dateStr) return null;
+    const cleanStr = dateStr.split('T')[0];
+    const parts = cleanStr.split('-');
+    if (parts.length !== 3) return null;
+    const [year, month, day] = parts.map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  // Sort weight logs helper
+  const getSortedWeightLogs = (logs) => {
+    const filtered = getFilteredByTimeframe(logs || [], 'date');
+    return [...filtered].sort((a, b) => {
+      if (weightSort === 'date-asc') {
+        return parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime();
+      } else if (weightSort === 'date-desc') {
+        return parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime();
+      } else if (weightSort === 'weight-asc') {
+        return a.weight - b.weight;
+      } else if (weightSort === 'weight-desc') {
+        return b.weight - a.weight;
+      }
+      return 0;
+    });
+  };
+
+  // Timeframe filtering helper
+  const getFilteredByTimeframe = (items, dateField) => {
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    return items.filter(item => {
+      if (!item[dateField]) return false;
+      const itemDate = parseLocalDate(item[dateField]);
+      if (!itemDate) return false;
+
+      if (timeframe === 'week') {
+        const diffTime = startOfToday.getTime() - itemDate.getTime();
+        const diffDays = diffTime / (1000 * 60 * 60 * 24);
+        return diffDays >= 0 && diffDays <= 7;
+      } else if (timeframe === 'month') {
+        return itemDate.getFullYear() === today.getFullYear() && itemDate.getMonth() === today.getMonth();
+      } else if (timeframe === 'year') {
+        return itemDate.getFullYear() === today.getFullYear();
+      } else if (timeframe === 'specific') {
+        if (!specificDate) return true;
+        const spec = parseLocalDate(specificDate);
+        return spec && itemDate.getTime() === spec.getTime();
+      } else if (timeframe === 'custom') {
+        if (!startDate && !endDate) return true;
+        const start = parseLocalDate(startDate);
+        const end = parseLocalDate(endDate);
+
+        if (start && itemDate.getTime() < start.getTime()) return false;
+        if (end && itemDate.getTime() > end.getTime()) return false;
+        return true;
+      }
+      return true;
+    });
+  };
+
+  const filteredExpenses = getFilteredByTimeframe(
+    expenses.filter(e => selectedPetId === 'all' || e.petId === selectedPetId),
+    'date'
+  );
   const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   const filteredReminders = reminders.filter(r => selectedPetId === 'all' || r.petId === selectedPetId)
@@ -644,6 +916,79 @@ export default function App() {
     acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
     return acc;
   }, {});
+
+  // Weight Analysis Helpers
+  const getWeightAnalysis = (logs) => {
+    if (!logs || logs.length === 0) return { avg: 0, min: 0, max: 0, changeText: 'N/A', text: 'No logs for this period.', isPositive: false };
+    const weights = logs.map(l => l.weight);
+    const avg = (weights.reduce((s, w) => s + w, 0) / weights.length).toFixed(1);
+    const min = Math.min(...weights).toFixed(1);
+    const max = Math.max(...weights).toFixed(1);
+    
+    let text = '';
+    let changeText = 'Stable';
+    let isPositive = false;
+    
+    if (logs.length >= 2) {
+      const first = logs[0].weight;
+      const last = logs[logs.length - 1].weight;
+      const diff = (last - first).toFixed(1);
+      const pct = ((diff / first) * 100).toFixed(1);
+      
+      if (diff > 0) {
+        changeText = `+${diff} kg (+${pct}%)`;
+        isPositive = true;
+        text = 'Weight shows an upward growth trend for this period. Great progress!';
+      } else if (diff < 0) {
+        changeText = `${diff} kg (${pct}%)`;
+        text = 'Weight decreased over this period. Monitor food portion sizes and consult your vet if unexpected.';
+      } else {
+        changeText = 'Stable (0.0 kg)';
+        text = 'Weight is stable. Perfect weight maintenance!';
+      }
+    } else {
+      text = 'Log at least 2 weight records to analyze weight change trends.';
+    }
+    
+    return { avg, min, max, changeText, text, isPositive };
+  };
+
+  // Expense Analysis Helpers
+  const getExpenseAnalysis = (filteredExps) => {
+    if (filteredExps.length === 0) return { topCategory: 'N/A', pct: 0, text: 'No expenses recorded for this period.' };
+    const total = filteredExps.reduce((s, e) => s + e.amount, 0);
+    
+    const catTotals = filteredExps.reduce((acc, curr) => {
+      acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
+      return acc;
+    }, {});
+    
+    let topCat = 'N/A';
+    let topVal = 0;
+    Object.keys(catTotals).forEach(cat => {
+      if (catTotals[cat] > topVal) {
+        topVal = catTotals[cat];
+        topCat = cat;
+      }
+    });
+    
+    const pct = total > 0 ? ((topVal / total) * 100).toFixed(0) : 0;
+    
+    let text = '';
+    if (topCat === 'Food') {
+      text = `Food is your primary expense (${pct}%). Buying in bulk can help save money in the long run.`;
+    } else if (topCat === 'Medical') {
+      text = `Medical costs dominate this period (${pct}%). Essential for your pet's health and wellness.`;
+    } else if (topCat === 'Grooming') {
+      text = `Grooming is your largest category (${pct}%). Regular brushing at home can reduce professional costs.`;
+    } else if (topCat !== 'N/A') {
+      text = `${topCat} makes up the majority of spending (${pct}%). Monitor these discretionary costs.`;
+    } else {
+      text = 'No category data available.';
+    }
+    
+    return { topCategory: topCat, topValue: topVal, pct, text };
+  };
 
   const categoryColors = {
     Food: '#6366f1',
@@ -738,7 +1083,7 @@ export default function App() {
       );
     }
 
-    const logs = activePet.weightLogs;
+    const logs = getFilteredByTimeframe(activePet.weightLogs || [], 'date');
     const padding = 30;
     const chartWidth = 500;
     const chartHeight = 160;
@@ -858,7 +1203,7 @@ export default function App() {
           <div style={{ backgroundColor: 'var(--primary-glow)', padding: '0.5rem', borderRadius: '12px' }}>
             <PawPrint size={24} style={{ color: 'var(--primary)' }} />
           </div>
-          <span className="logo-text">Pawsome</span>
+          <span className="logo-text">Pawfecto</span>
         </div>
 
         <nav style={{ flexGrow: 1 }}>
@@ -889,8 +1234,28 @@ export default function App() {
                 className={`nav-item ${activeTab === 'health' ? 'active' : ''}`}
                 style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left' }}
               >
-                <Heart size={20} />
-                Health Logs
+                <Scale size={20} />
+                Weight Logs
+              </button>
+            </li>
+            <li>
+              <button 
+                onClick={() => setActiveTab('reminders')} 
+                className={`nav-item ${activeTab === 'reminders' ? 'active' : ''}`}
+                style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left' }}
+              >
+                <Bell size={20} />
+                Reminders
+              </button>
+            </li>
+            <li>
+              <button 
+                onClick={() => setActiveTab('vaccination')} 
+                className={`nav-item ${activeTab === 'vaccination' ? 'active' : ''}`}
+                style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left' }}
+              >
+                <ShieldAlert size={20} />
+                Vaccinations
               </button>
             </li>
             <li>
@@ -967,20 +1332,76 @@ export default function App() {
               </select>
             </div>
 
+            {/* Global Timeframe Selector */}
+            {['dashboard', 'health', 'expenses'].includes(activeTab) && (
+              <div style={{ position: 'relative' }}>
+                <select 
+                  value={timeframe} 
+                  onChange={(e) => setTimeframe(e.target.value)} 
+                  className="form-select"
+                  style={{ paddingRight: '2.5rem', minWidth: '140px', fontWeight: '600' }}
+                >
+                  <option value="week">📅 This Week</option>
+                  <option value="month">📅 This Month</option>
+                  <option value="year">📅 This Year</option>
+                  <option value="specific">📅 Specific Date</option>
+                  <option value="custom">📅 Custom Range</option>
+                </select>
+              </div>
+            )}
+
+            {/* Contextual Date Range / Specific Date Inputs */}
+            {['dashboard', 'health', 'expenses'].includes(activeTab) && timeframe === 'custom' && (
+              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'nowrap' }}>
+                <input 
+                  type="date" 
+                  className="form-input" 
+                  style={{ padding: '0.35rem 0.5rem', fontSize: '0.85rem', width: '120px', minWidth: '110px', fontWeight: '500' }}
+                  value={startDate} 
+                  onChange={(e) => setStartDate(e.target.value)} 
+                />
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '600' }}>to</span>
+                <input 
+                  type="date" 
+                  className="form-input" 
+                  style={{ padding: '0.35rem 0.5rem', fontSize: '0.85rem', width: '120px', minWidth: '110px', fontWeight: '500' }}
+                  value={endDate} 
+                  onChange={(e) => setEndDate(e.target.value)} 
+                />
+              </div>
+            )}
+
+            {['dashboard', 'health', 'expenses'].includes(activeTab) && timeframe === 'specific' && (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input 
+                  type="date" 
+                  className="form-input" 
+                  style={{ padding: '0.35rem 0.5rem', fontSize: '0.85rem', width: '140px', minWidth: '120px', fontWeight: '500' }}
+                  value={specificDate} 
+                  onChange={(e) => setSpecificDate(e.target.value)} 
+                />
+              </div>
+            )}
+
             {activeTab === 'pets' && (
               <button className="btn btn-primary" onClick={openAddPet}>
                 <Plus size={18} /> Add Pet
               </button>
             )}
             {activeTab === 'health' && (
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button className="btn btn-secondary" onClick={openAddWeight}>
-                  <Scale size={18} /> Log Weight
-                </button>
-                <button className="btn btn-primary" onClick={openAddReminder}>
-                  <Plus size={18} /> Add Reminder
-                </button>
-              </div>
+              <button className="btn btn-primary" onClick={openAddWeight}>
+                <Plus size={18} /> Log Weight
+              </button>
+            )}
+            {activeTab === 'reminders' && (
+              <button className="btn btn-primary" onClick={openAddReminder}>
+                <Plus size={18} /> Add Reminder
+              </button>
+            )}
+            {activeTab === 'vaccination' && (
+              <button className="btn btn-primary" onClick={openAddVaccine}>
+                <Plus size={18} /> Log Vaccination
+              </button>
             )}
             {activeTab === 'expenses' && (
               <button className="btn btn-primary" onClick={openAddExpense}>
@@ -1159,11 +1580,10 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. HEALTH LOGS VIEW */}
+        {/* 3. HEALTH LOGS (WEIGHT LOGS ONLY) VIEW */}
         {activeTab === 'health' && (
           <div className="dashboard-grid">
-            {/* Weight management list */}
-            <div className="col-6">
+            <div className="col-12">
               <div className="glass-card">
                 <h3 style={{ marginBottom: '1.5rem' }}>Weight Logs</h3>
                 {selectedPetId === 'all' ? (
@@ -1172,14 +1592,27 @@ export default function App() {
                   </p>
                 ) : (
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                       <p style={{ fontWeight: '600' }}>Logs for {currentPet?.name}</p>
-                      <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={openAddWeight}>
-                        + Add Log
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <select
+                          value={weightSort}
+                          onChange={(e) => setWeightSort(e.target.value)}
+                          className="form-select"
+                          style={{ padding: '0.35rem 2rem 0.35rem 0.75rem', fontSize: '0.8rem', minWidth: '155px', height: 'auto', fontWeight: '600' }}
+                        >
+                          <option value="date-desc">📅 Date: Newest First</option>
+                          <option value="date-asc">📅 Date: Oldest First</option>
+                          <option value="weight-desc">⚖️ Weight: Highest First</option>
+                          <option value="weight-asc">⚖️ Weight: Lowest First</option>
+                        </select>
+                        <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={openAddWeight}>
+                          + Add Log
+                        </button>
+                      </div>
                     </div>
-                    {(!currentPet?.weightLogs || currentPet.weightLogs.length === 0) ? (
-                      <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem' }}>No weight logs found.</p>
+                    {(!currentPet?.weightLogs || getFilteredByTimeframe(currentPet.weightLogs, 'date').length === 0) ? (
+                      <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem' }}>No weight logs found for this period.</p>
                     ) : (
                       <div style={{ overflowX: 'auto' }}>
                         <table className="data-table">
@@ -1191,13 +1624,16 @@ export default function App() {
                             </tr>
                           </thead>
                           <tbody>
-                            {currentPet.weightLogs.map((log, index) => (
-                              <tr key={index}>
+                            {getSortedWeightLogs(currentPet.weightLogs).map((log) => (
+                              <tr key={log.date}>
                                 <td>{log.date}</td>
                                 <td style={{ fontWeight: '600' }}>{log.weight} kg</td>
-                                <td style={{ textAlign: 'right' }}>
-                                  <button className="btn-icon" style={{ width: '30px', height: '30px', display: 'inline-flex' }} onClick={() => deleteWeightLog(currentPet.id, index)}>
-                                    <Trash2 size={14} style={{ color: 'var(--danger)' }} />
+                                <td style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '0.25rem' }}>
+                                  <button className="btn-icon" style={{ width: '30px', height: '30px', display: 'inline-flex' }} onClick={() => openEditWeight(currentPet.id, log)}>
+                                    <Edit3 size={12} style={{ color: 'var(--primary)' }} />
+                                  </button>
+                                  <button className="btn-icon" style={{ width: '30px', height: '30px', display: 'inline-flex' }} onClick={() => deleteWeightLog(currentPet.id, log.date)}>
+                                    <Trash2 size={12} style={{ color: 'var(--danger)' }} />
                                   </button>
                                 </td>
                               </tr>
@@ -1206,13 +1642,51 @@ export default function App() {
                         </table>
                       </div>
                     )}
+
+                    {/* Weight Analysis Summary Card */}
+                    {currentPet?.weightLogs && getFilteredByTimeframe(currentPet.weightLogs, 'date').length > 0 && (
+                      <div style={{ marginTop: '1.5rem', padding: '1rem', border: '1px solid var(--border-color)', borderRadius: '12px', backgroundColor: 'var(--bg-card)' }}>
+                        <h4 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+                          <Scale size={18} style={{ color: 'var(--primary)' }} />
+                          Weight Insights & Analysis
+                        </h4>
+                        {(() => {
+                          const analysis = getWeightAnalysis(getFilteredByTimeframe(currentPet.weightLogs, 'date'));
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.9rem' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', textAlign: 'center' }}>
+                                <div style={{ padding: '0.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px' }}>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Average</div>
+                                  <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>{analysis.avg} kg</div>
+                                </div>
+                                <div style={{ padding: '0.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px' }}>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Min / Max</div>
+                                  <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>{analysis.min} / {analysis.max} kg</div>
+                                </div>
+                                <div style={{ padding: '0.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px' }}>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Change</div>
+                                  <div style={{ fontWeight: '700', fontSize: '1.1rem', color: analysis.isPositive ? 'var(--success)' : 'var(--text-main)' }}>{analysis.changeText}</div>
+                                </div>
+                              </div>
+                              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic', marginTop: '0.25rem', lineHeight: '1.4' }}>
+                                💡 {analysis.text}
+                              </p>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Reminders full view */}
-            <div className="col-6">
+        {/* 3b. REMINDERS VIEW */}
+        {activeTab === 'reminders' && (
+          <div className="dashboard-grid">
+            <div className="col-12">
               <div className="glass-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <h3>All Reminders</h3>
@@ -1264,6 +1738,74 @@ export default function App() {
           </div>
         )}
 
+        {/* 3c. VACCINATION VIEW */}
+        {activeTab === 'vaccination' && (
+          <div className="dashboard-grid">
+            <div className="col-12">
+              <div className="glass-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                  <h3>Vaccination Log & Brand Records</h3>
+                  <button className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={openAddVaccine}>
+                    Log Vaccination
+                  </button>
+                </div>
+                {selectedPetId === 'all' ? (
+                  <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem' }}>
+                    Please select a specific pet from the header bar to view and log vaccinations.
+                  </p>
+                ) : (
+                  <div>
+                    <p style={{ fontWeight: '600', marginBottom: '1rem' }}>Vaccination Records for {currentPet?.name}</p>
+                    {(!currentPet?.vaccineLogs || currentPet.vaccineLogs.length === 0) ? (
+                      <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem' }}>No vaccination records logged yet.</p>
+                    ) : (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Date</th>
+                              <th>Vaccine Name</th>
+                              <th>Brand / Manufacturer</th>
+                              <th>Notes</th>
+                              <th style={{ textAlign: 'right' }}>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {currentPet.vaccineLogs.map((log) => (
+                              <tr key={log.id}>
+                                <td>{log.date}</td>
+                                <td style={{ fontWeight: '600', color: 'var(--primary)' }}>{log.vaccineName}</td>
+                                <td>
+                                  {log.brand ? (
+                                    <span className="badge badge-secondary" style={{ textTransform: 'none' }}>
+                                      {log.brand}
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>Unspecified Brand</span>
+                                  )}
+                                </td>
+                                <td style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{log.notes || '-'}</td>
+                                <td style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '0.25rem' }}>
+                                  <button className="btn-icon" style={{ width: '30px', height: '30px', display: 'inline-flex' }} onClick={() => openEditVaccine(currentPet.id, log)}>
+                                    <Edit3 size={12} style={{ color: 'var(--primary)' }} />
+                                  </button>
+                                  <button className="btn-icon" style={{ width: '30px', height: '30px', display: 'inline-flex' }} onClick={() => deleteVaccine(currentPet.id, log.id)}>
+                                    <Trash2 size={12} style={{ color: 'var(--danger)' }} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 4. EXPENSES VIEW */}
         {activeTab === 'expenses' && (
           <div className="glass-card">
@@ -1271,13 +1813,47 @@ export default function App() {
               <div>
                 <h3>Expense Registry</h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                  Total Filtered Expense: <span style={{ fontWeight: '700', color: 'var(--primary)' }}>{currencySymbol}{totalExpenses.toLocaleString()}</span>
+                  Manage and monitor your pet-related expenditures.
                 </p>
               </div>
               <button className="btn btn-primary" onClick={openAddExpense}>
                 Track New Expense
               </button>
             </div>
+
+            {/* Expense Analysis Summary */}
+            {filteredExpenses.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+                <div style={{ padding: '1.25rem', border: '1px solid var(--border-color)', borderRadius: '12px', backgroundColor: 'var(--bg-card)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600' }}>Total Spent ({timeframe})</span>
+                    <span className="badge badge-primary" style={{ textTransform: 'capitalize' }}>{timeframe}</span>
+                  </div>
+                  <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--primary)' }}>
+                    {currencySymbol}{totalExpenses.toLocaleString()}
+                  </div>
+                </div>
+
+                <div style={{ padding: '1.25rem', border: '1px solid var(--border-color)', borderRadius: '12px', backgroundColor: 'var(--bg-card)' }}>
+                  {(() => {
+                    const analysis = getExpenseAnalysis(filteredExpenses);
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600' }}>Top Spending Category</span>
+                          <span className="badge badge-secondary" style={{ backgroundColor: `${categoryColors[analysis.topCategory]}15`, color: categoryColors[analysis.topCategory] }}>
+                            {analysis.topCategory} ({analysis.pct}%)
+                          </span>
+                        </div>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic', marginTop: '0.25rem', lineHeight: '1.4' }}>
+                          💡 {analysis.text}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
 
             {filteredExpenses.length === 0 ? (
               <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>No expense records found.</p>
@@ -1310,7 +1886,10 @@ export default function App() {
                           </td>
                           <td style={{ color: 'var(--text-muted)' }}>{exp.description || '-'}</td>
                           <td style={{ fontWeight: '700' }}>{currencySymbol}{exp.amount.toLocaleString()}</td>
-                          <td style={{ textAlign: 'right' }}>
+                          <td style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '0.25rem' }}>
+                            <button className="btn-icon" style={{ width: '32px', height: '32px', display: 'inline-flex' }} onClick={() => openEditExpense(exp)}>
+                              <Edit3 size={14} style={{ color: 'var(--primary)' }} />
+                            </button>
                             <button className="btn-icon" style={{ width: '32px', height: '32px', display: 'inline-flex' }} onClick={() => deleteExpense(exp.id)}>
                               <Trash2 size={14} style={{ color: 'var(--danger)' }} />
                             </button>
@@ -1332,7 +1911,7 @@ export default function App() {
               <div className="glass-card">
                 <h3 style={{ marginBottom: '1.25rem' }}>Data Backup & Security</h3>
                 <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                  Pawsome is a local-first application. To ensure your pet records are never lost, back them up locally onto your PC or phone.
+                  Pawfecto is a local-first application. To ensure your pet records are never lost, back them up locally onto your PC or phone.
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -1411,7 +1990,7 @@ export default function App() {
               <div className="glass-card">
                 <h3 style={{ marginBottom: '1rem' }}>Interactive Onboarding Missions</h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                  Complete these tutorial steps to understand how Pawsome keeps your pet's life structured.
+                  Complete these tutorial steps to understand how Pawfecto keeps your pet's life structured.
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -1602,14 +2181,22 @@ export default function App() {
 
                 <div className="form-group">
                   <label className="form-label">Amount ({currencySymbol})</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    className="form-input" 
-                    value={expenseForm.amount} 
-                    onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} 
-                    required 
-                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <input 
+                      type="number" 
+                      step="any" 
+                      className="form-input" 
+                      value={expenseForm.amount} 
+                      onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} 
+                      required 
+                    />
+                    <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                      <button type="button" className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', flexGrow: 1 }} onClick={() => adjustExpense(-10)}>-10</button>
+                      <button type="button" className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', flexGrow: 1 }} onClick={() => adjustExpense(-1)}>-1</button>
+                      <button type="button" className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', flexGrow: 1 }} onClick={() => adjustExpense(1)}>+1</button>
+                      <button type="button" className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', flexGrow: 1 }} onClick={() => adjustExpense(10)}>+10</button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1749,8 +2336,8 @@ export default function App() {
         <div className="modal-overlay">
           <div className="modal-content">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2>Log Pet Weight</h2>
-              <button onClick={() => setShowWeightModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+              <h2>{editingWeight ? 'Edit Weight Record' : 'Log Pet Weight'}</h2>
+              <button onClick={() => { setShowWeightModal(false); setEditingWeight(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                 <X size={24} />
               </button>
             </div>
@@ -1772,15 +2359,23 @@ export default function App() {
 
               <div className="form-group">
                 <label className="form-label">Weight (kg)</label>
-                <input 
-                  type="number" 
-                  step="0.01" 
-                  placeholder="e.g. 5.4"
-                  className="form-input" 
-                  value={weightForm.weight} 
-                  onChange={(e) => setWeightForm({ ...weightForm, weight: e.target.value })} 
-                  required 
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <input 
+                    type="number" 
+                    step="any" 
+                    placeholder="e.g. 5.4"
+                    className="form-input" 
+                    value={weightForm.weight} 
+                    onChange={(e) => setWeightForm({ ...weightForm, weight: e.target.value })} 
+                    required 
+                  />
+                  <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                    <button type="button" className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', flexGrow: 1 }} onClick={() => adjustWeight(-10)}>-10</button>
+                    <button type="button" className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', flexGrow: 1 }} onClick={() => adjustWeight(-1)}>-1</button>
+                    <button type="button" className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', flexGrow: 1 }} onClick={() => adjustWeight(1)}>+1</button>
+                    <button type="button" className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', flexGrow: 1 }} onClick={() => adjustWeight(10)}>+10</button>
+                  </div>
+                </div>
               </div>
 
               <div className="form-group">
@@ -1795,8 +2390,88 @@ export default function App() {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowWeightModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Log Weight</button>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowWeightModal(false); setEditingWeight(null); }}>Cancel</button>
+                <button type="submit" className="btn btn-primary">{editingWeight ? 'Save Changes' : 'Log Weight'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4b. Vaccination Modal */}
+      {showVaccineModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2>{editingVaccine ? 'Edit Vaccination Record' : 'Log Vaccination'}</h2>
+              <button onClick={() => { setShowVaccineModal(false); setEditingVaccine(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                <X size={24} />
+              </button>
+            </div>
+            <form onSubmit={saveVaccine}>
+              <div className="form-group">
+                <label className="form-label">Select Pet</label>
+                <select 
+                  className="form-select" 
+                  value={vaccineForm.petId} 
+                  onChange={(e) => setVaccineForm({ ...vaccineForm, petId: e.target.value })}
+                  required
+                >
+                  <option value="" disabled>Choose a pet...</option>
+                  {pets.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Vaccine Name</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="e.g. DHPP Core Vaccine, Rabies booster"
+                  value={vaccineForm.vaccineName} 
+                  onChange={(e) => setVaccineForm({ ...vaccineForm, vaccineName: e.target.value })} 
+                  required 
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Brand / Manufacturer</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="e.g. Nobivac, Defensor 3, Zoetis"
+                  value={vaccineForm.brand} 
+                  onChange={(e) => setVaccineForm({ ...vaccineForm, brand: e.target.value })} 
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Date Administered</label>
+                <input 
+                  type="date" 
+                  className="form-input" 
+                  value={vaccineForm.date} 
+                  onChange={(e) => setVaccineForm({ ...vaccineForm, date: e.target.value })} 
+                  required 
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Notes</label>
+                <textarea 
+                  className="form-input" 
+                  placeholder="e.g. Next booster due in 12 months, mild lethargy afterwards"
+                  value={vaccineForm.notes} 
+                  onChange={(e) => setVaccineForm({ ...vaccineForm, notes: e.target.value })} 
+                  style={{ minHeight: '80px', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowVaccineModal(false); setEditingVaccine(null); }}>Cancel</button>
+                <button type="submit" className="btn btn-primary">{editingVaccine ? 'Save Changes' : 'Log Vaccination'}</button>
               </div>
             </form>
           </div>
