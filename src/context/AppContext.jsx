@@ -61,7 +61,15 @@ export function AppProvider({ children }) {
 
   // --- FILTERS & INTERACTION STATE ---
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedPetId, setSelectedPetId] = useState('all');
+  const [selectedPetId, setSelectedPetId] = useState(() => {
+    const saved = localStorage.getItem('pawfecto_pets') || localStorage.getItem('pawsome_pets');
+    const petsList = saved ? JSON.parse(saved) : INITIAL_PETS;
+    if (petsList && petsList.length > 0) {
+      const randomIndex = Math.floor(Math.random() * petsList.length);
+      return petsList[randomIndex].id;
+    }
+    return 'all';
+  });
   const [timeframe, setTimeframe] = useState('month'); // 'week' | 'month' | 'year' | 'specific' | 'custom'
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -513,6 +521,8 @@ export function AppProvider({ children }) {
       return p;
     }));
 
+    setSelectedPetId(weightForm.petId);
+
     if (editingWeight) {
       showFeedback('Weight record updated successfully!');
     } else {
@@ -619,6 +629,8 @@ export function AppProvider({ children }) {
       }
       return p;
     }));
+
+    setSelectedPetId(vaccineForm.petId);
 
     if (vaccineForm.createAlert) {
       if (!vaccineForm.alertDate) {
