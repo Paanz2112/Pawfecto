@@ -38,3 +38,10 @@ build/
 /ios/App/App/capacitor.plugins.json
 /ios/App/pods/
 /ios/App/Podfile.lock
+
+# AI Agent files
+Plan.md
+task.md
+implementation_plan.md
+walkthrough.md
+
