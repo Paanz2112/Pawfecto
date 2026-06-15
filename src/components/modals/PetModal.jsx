@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Upload } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { compressImage } from '../../utils/helpers';
 
 export default function PetModal() {
   const { 
@@ -15,18 +16,19 @@ export default function PetModal() {
 
   if (!showPetModal) return null;
 
-  const handlePhotoUpload = (e) => {
+  const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        showFeedback('Image must be under 2MB to ensure local storage operates efficiently.', 'danger');
+      if (file.size > 10 * 1024 * 1024) {
+        showFeedback('Image must be under 10MB to be processed.', 'danger');
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPetForm(prev => ({ ...prev, photo: reader.result }));
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedBase64 = await compressImage(file, 256, 256, 0.7);
+        setPetForm(prev => ({ ...prev, photo: compressedBase64 }));
+      } catch (err) {
+        showFeedback('Failed to process and compress image.', 'danger');
+      }
     }
   };
 

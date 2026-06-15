@@ -1,16 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   PawPrint, 
   DollarSign, 
   Bell, 
   CheckCircle2, 
   TrendingUp, 
-  Scale 
+  Scale,
+  Plus,
+  ArrowRight,
+  TrendingDown
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import WeightChart from '../../components/charts/WeightChart';
 import ExpenseDonut from '../../components/charts/ExpenseDonut';
 import { categoryColors } from '../../utils/constants';
+import { Capacitor } from '@capacitor/core';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 export default function DashboardTab() {
   const { 
@@ -20,6 +25,8 @@ export default function DashboardTab() {
     filteredReminders, 
     currencySymbol, 
     setActiveTab, 
+    setSelectedPetId,
+    openAddPet,
     openAddWeight, 
     openAddReminder, 
     toggleReminderCompleted,
@@ -29,6 +36,253 @@ export default function DashboardTab() {
     getWeightAnalysis,
     getExpenseAnalysis
   } = useApp();
+
+  const isNative = Capacitor.isNativePlatform();
+  const [mobileAnalyticsTab, setMobileAnalyticsTab] = useState('weight'); // 'weight', 'expenses', 'insights'
+
+  const triggerHaptic = async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Haptics.impact({ style: ImpactStyle.Light });
+      } catch (e) {}
+    }
+  };
+
+  const handlePetSelect = (id) => {
+    setSelectedPetId(id);
+    triggerHaptic();
+  };
+
+  if (isNative) {
+    return (
+      <div className="mobile-dashboard-container">
+        {/* 1. Horizontal Pet Selector */}
+        <div className="mobile-section-header">
+          <span className="mobile-section-title">My Family</span>
+        </div>
+        <div className="mobile-pet-scroll-container">
+          <div 
+            className={`mobile-pet-scroll-item ${selectedPetId === 'all' ? 'active' : ''}`}
+            onClick={() => handlePetSelect('all')}
+          >
+            <div className="mobile-pet-avatar-wrapper all-pets">
+              <span>🐾</span>
+            </div>
+            <span className="mobile-pet-name">All</span>
+          </div>
+          {pets.map(p => (
+            <div 
+              key={p.id} 
+              className={`mobile-pet-scroll-item ${selectedPetId === p.id ? 'active' : ''}`}
+              onClick={() => handlePetSelect(p.id)}
+            >
+              <div className="mobile-pet-avatar-wrapper">
+                {p.photo ? (
+                  <img src={p.photo} alt={p.name} className="mobile-pet-img" />
+                ) : (
+                  <span className="mobile-pet-placeholder">{p.name[0]}</span>
+                )}
+              </div>
+              <span className="mobile-pet-name">{p.name}</span>
+            </div>
+          ))}
+          <div className="mobile-pet-scroll-item add-new" onClick={() => { openAddPet(); triggerHaptic(); }}>
+            <div className="mobile-pet-avatar-wrapper add">
+              <Plus size={18} />
+            </div>
+            <span className="mobile-pet-name">Add</span>
+          </div>
+        </div>
+
+        {/* 2. Key Metrics Row */}
+        <div className="mobile-metrics-container">
+          <div className="mobile-metric-card" onClick={() => { setActiveTab('pets'); triggerHaptic(); }}>
+            <div className="metric-icon-box bg-purple">
+              <PawPrint size={18} />
+            </div>
+            <div className="metric-info">
+              <span className="metric-val">{pets.length}</span>
+              <span className="metric-lbl">Pets</span>
+            </div>
+          </div>
+          <div className="mobile-metric-card" onClick={() => { setActiveTab('expenses'); triggerHaptic(); }}>
+            <div className="metric-icon-box bg-pink">
+              <DollarSign size={18} />
+            </div>
+            <div className="metric-info">
+              <span className="metric-val">{currencySymbol}{totalExpenses.toLocaleString()}</span>
+              <span className="metric-lbl">Expenses</span>
+            </div>
+          </div>
+          <div className="mobile-metric-card" onClick={() => { setActiveTab('reminders'); triggerHaptic(); }}>
+            <div className="metric-icon-box bg-amber">
+              <Bell size={18} />
+            </div>
+            <div className="metric-info">
+              <span className="metric-val">{filteredReminders.filter(r => !r.completed).length}</span>
+              <span className="metric-lbl">Reminders</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Segmented Tab Selector for Charts/Analytics */}
+        <div className="mobile-segmented-tab-bar">
+          <button 
+            className={`mobile-tab-btn ${mobileAnalyticsTab === 'weight' ? 'active' : ''}`}
+            onClick={() => { setMobileAnalyticsTab('weight'); triggerHaptic(); }}
+          >
+            Weight
+          </button>
+          <button 
+            className={`mobile-tab-btn ${mobileAnalyticsTab === 'expenses' ? 'active' : ''}`}
+            onClick={() => { setMobileAnalyticsTab('expenses'); triggerHaptic(); }}
+          >
+            Expenses
+          </button>
+          <button 
+            className={`mobile-tab-btn ${mobileAnalyticsTab === 'insights' ? 'active' : ''}`}
+            onClick={() => { setMobileAnalyticsTab('insights'); triggerHaptic(); }}
+          >
+            Insights
+          </button>
+        </div>
+
+        {/* 4. Tab Contents */}
+        <div className="mobile-tab-card glass-card">
+          {mobileAnalyticsTab === 'weight' && (
+            <div className="mobile-chart-view">
+              <div className="mobile-card-header">
+                <h3>Weight Timeline</h3>
+                <button className="mobile-action-link" onClick={() => { openAddWeight(); triggerHaptic(); }}>
+                  + Log
+                </button>
+              </div>
+              <WeightChart />
+            </div>
+          )}
+
+          {mobileAnalyticsTab === 'expenses' && (
+            <div className="mobile-chart-view">
+              <div className="mobile-card-header">
+                <h3>Expense Split</h3>
+                <button className="mobile-action-link" onClick={() => { setActiveTab('expenses'); triggerHaptic(); }}>
+                  Details <ArrowRight size={14} />
+                </button>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', margin: '1rem 0' }}>
+                <ExpenseDonut />
+              </div>
+            </div>
+          )}
+
+          {mobileAnalyticsTab === 'insights' && (
+            <div className="mobile-insights-view">
+              <h3 style={{ marginBottom: '1.25rem' }}>Personalized Insights</h3>
+              
+              {/* Weight Insight */}
+              <div className="mobile-insight-item">
+                <div className="insight-header">
+                  <Scale size={16} />
+                  <span>Weight Analysis</span>
+                </div>
+                {(() => {
+                  let activePetForWeight = currentPet;
+                  if (selectedPetId === 'all' && pets.length > 0) {
+                    activePetForWeight = pets[0];
+                  }
+                  const logs = getFilteredByTimeframe(activePetForWeight?.weightLogs || [], 'date');
+                  if (!activePetForWeight || logs.length === 0) {
+                    return <p className="insight-empty">No weight data logged for this period.</p>;
+                  }
+                  const analysis = getWeightAnalysis(logs, activePetForWeight);
+                  return (
+                    <div className="insight-detail">
+                      <div className="insight-row">
+                        <span>Period Avg:</span>
+                        <strong>{analysis.avg} kg</strong>
+                      </div>
+                      <p className={`insight-desc border-${analysis.status}`}>{analysis.text}</p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Expense Insight */}
+              <div className="mobile-insight-item" style={{ marginTop: '1.25rem' }}>
+                <div className="insight-header">
+                  <DollarSign size={16} />
+                  <span>Expense Analysis</span>
+                </div>
+                {filteredExpenses.length === 0 ? (
+                  <p className="insight-empty">No expense data logged for this period.</p>
+                ) : (
+                  (() => {
+                    const analysis = getExpenseAnalysis(filteredExpenses);
+                    return (
+                      <div className="insight-detail">
+                        <div className="insight-row">
+                          <span>Top Category:</span>
+                          <span className="badge badge-secondary" style={{ backgroundColor: `${categoryColors[analysis.topCategory]}15`, color: categoryColors[analysis.topCategory] }}>
+                            {analysis.topCategory} ({analysis.pct}%)
+                          </span>
+                        </div>
+                        <p className="insight-desc border-primary">{analysis.text}</p>
+                      </div>
+                    );
+                  })()
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 5. Upcoming Reminders Card */}
+        <div className="mobile-section-header" style={{ marginTop: '2rem' }}>
+          <span className="mobile-section-title">Today's Schedule</span>
+          <button className="mobile-section-link" onClick={() => { setActiveTab('reminders'); triggerHaptic(); }}>
+            See All <ArrowRight size={14} />
+          </button>
+        </div>
+        
+        <div className="mobile-reminders-card glass-card">
+          <div className="mobile-card-header">
+            <h3>Reminders & Tasks</h3>
+            <button className="btn-circle-add" onClick={() => { openAddReminder(); triggerHaptic(); }}>
+              <Plus size={18} />
+            </button>
+          </div>
+          
+          {filteredReminders.length === 0 ? (
+            <p className="insight-empty" style={{ textAlign: 'center', padding: '2rem 0' }}>All clear! No tasks for today.</p>
+          ) : (
+            <div className="mobile-reminders-list">
+              {filteredReminders.slice(0, 3).map(rem => {
+                const pet = pets.find(p => p.id === rem.petId);
+                return (
+                  <div key={rem.id} className={`mobile-reminder-row ${rem.completed ? 'completed' : ''}`}>
+                    <button 
+                      onClick={() => { toggleReminderCompleted(rem.id); triggerHaptic(); }} 
+                      className="mobile-checkbox"
+                    >
+                      <CheckCircle2 size={22} fill={rem.completed ? 'var(--success)' : 'transparent'} />
+                    </button>
+                    <div className="mobile-reminder-details">
+                      <span className="mobile-reminder-text">{rem.title}</span>
+                      <div className="mobile-reminder-tags">
+                        <span className="badge badge-primary">{pet ? pet.name : 'All'}</span>
+                        <span className="time-tag">{rem.time ? `@ ${rem.time}` : 'Anytime'}</span>
+                      </div>
+                    </div>
+                    <span className="badge badge-secondary" style={{ fontSize: '0.65rem' }}>{rem.type}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-grid">

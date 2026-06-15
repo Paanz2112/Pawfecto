@@ -1,6 +1,7 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Bell, User } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { Capacitor } from '@capacitor/core';
 
 export default function Header() {
   const { 
@@ -23,20 +24,50 @@ export default function Header() {
     openAddExpense
   } = useApp();
 
+  const isNative = Capacitor.isNativePlatform();
+
   // Helper to map tab names to clean titles
   const getTabTitle = (tab) => {
     switch (tab) {
       case 'dashboard': return 'Dashboard';
       case 'pets': return 'Pets Family';
-      case 'health': return 'Weight Logs';
+      case 'health': return 'Weight';
       case 'reminders': return 'Reminders';
       case 'vaccination': return 'Vaccinations';
       case 'expenses': return 'Expenses';
-      case 'settings': return 'Backup & Settings';
-      case 'guide': return 'App Guide & Tour';
+      case 'settings': return 'Settings';
+      case 'guide': return 'App Guide';
       default: return tab;
     }
   };
+
+  // Find the selected pet for display in the mobile header
+  const activePet = pets.find(p => p.id === selectedPetId);
+
+  if (isNative) {
+    return (
+      <header className="mobile-header-bar">
+        <div className="mobile-profile-container">
+          <div className="profile-greeting">
+            <span className="greeting-sub">PAWFECTO</span>
+            <h2 className="greeting-main">{getTabTitle(activeTab)}</h2>
+          </div>
+        </div>
+        <div className="mobile-header-actions">
+          <button className="mobile-icon-btn">
+            <Bell size={22} />
+          </button>
+          <div className="mobile-user-avatar">
+            {activePet && activePet.photo ? (
+              <img src={activePet.photo} alt={activePet.name} className="header-pet-avatar" />
+            ) : (
+              <User size={20} />
+            )}
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="header-bar">
@@ -101,6 +132,7 @@ export default function Header() {
           </div>
         )}
 
+        {/* Contextual Date Range / Specific Date Inputs */}
         {['dashboard', 'health', 'expenses'].includes(activeTab) && timeframe === 'specific' && (
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <input 
