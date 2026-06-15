@@ -1,9 +1,11 @@
 import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import Sidebar from './components/layout/Sidebar';
+import BottomNav from './components/layout/BottomNav';
 import Header from './components/layout/Header';
 import Toast from './components/ui/Toast';
 import AlertPopup from './components/ui/AlertPopup';
+import { Capacitor } from '@capacitor/core';
 
 // Tabs
 import DashboardTab from './features/dashboard/DashboardTab';
@@ -23,7 +25,26 @@ import WeightModal from './components/modals/WeightModal';
 import VaccineModal from './components/modals/VaccineModal';
 
 function MainAppContent() {
-  const { activeTab } = useApp();
+  const { activeTab, loading } = useApp();
+  const isNative = Capacitor.isNativePlatform();
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        backgroundColor: 'var(--bg-app)',
+        color: 'var(--text-main)',
+        gap: '1rem'
+      }}>
+        <div className="spinner-loader"></div>
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Loading Pawfecto database...</p>
+      </div>
+    );
+  }
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -40,12 +61,12 @@ function MainAppContent() {
   };
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${isNative ? 'is-mobile-platform' : 'is-web-platform'}`}>
       {/* Toast Feedback */}
       <Toast />
 
-      {/* Sidebar Navigation */}
-      <Sidebar />
+      {/* Sidebar Navigation - only visible on web */}
+      {!isNative && <Sidebar />}
 
       {/* Main Wrapper */}
       <main className="main-wrapper">
@@ -53,8 +74,13 @@ function MainAppContent() {
         <Header />
 
         {/* Current active view content */}
-        {renderActiveTab()}
+        <div className="tab-content-area">
+          {renderActiveTab()}
+        </div>
       </main>
+
+      {/* Bottom Navigation - only visible on mobile native platforms */}
+      {isNative && <BottomNav />}
 
       {/* Modal overlays and triggers */}
       <PetModal />

@@ -10,66 +10,31 @@ import {
   sanitizeInput, 
   getAge, 
   parseLocalDate, 
-  getNextOccurrence 
+  getNextOccurrence,
+  validateBackupData
 } from '../utils/helpers';
+import {
+  getDBValue,
+  setDBValue,
+  migrateFromLocalStorage
+} from '../utils/db';
 
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
   // --- CORE STATE ---
-  const [pets, setPets] = useState(() => {
-    const saved = localStorage.getItem('pawfecto_pets') || localStorage.getItem('pawsome_pets');
-    return saved ? JSON.parse(saved) : INITIAL_PETS;
-  });
-
-  const [expenses, setExpenses] = useState(() => {
-    const saved = localStorage.getItem('pawfecto_expenses') || localStorage.getItem('pawsome_expenses');
-    return saved ? JSON.parse(saved) : INITIAL_EXPENSES;
-  });
-
-  const [reminders, setReminders] = useState(() => {
-    const saved = localStorage.getItem('pawfecto_reminders') || localStorage.getItem('pawsome_reminders');
-    const loaded = saved ? JSON.parse(saved) : INITIAL_REMINDERS;
-    const limitDate = new Date();
-    limitDate.setMonth(limitDate.getMonth() - 3);
-
-    return loaded.filter(rem => {
-      if (rem.completed && rem.date) {
-        const parts = rem.date.split('-');
-        if (parts.length === 3) {
-          const [yr, mo, dy] = parts.map(Number);
-          const remDate = new Date(yr, mo - 1, dy);
-          if (remDate.getTime() < limitDate.getTime()) {
-            return false;
-          }
-        }
-      }
-      return true;
-    });
-  });
-
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('pawfecto_theme') || localStorage.getItem('pawsome_theme');
-    return saved || 'light';
-  });
-
-  const [currency, setCurrency] = useState(() => {
-    return localStorage.getItem('pawfecto_currency') || localStorage.getItem('pawsome_currency') || 'THB';
-  });
+  const [pets, setPets] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [reminders, setReminders] = useState([]);
+  const [theme, setTheme] = useState('light');
+  const [currency, setCurrency] = useState('THB');
+  const [loading, setLoading] = useState(true);
 
   const currencySymbol = CURRENCIES[currency] || '$';
 
   // --- FILTERS & INTERACTION STATE ---
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedPetId, setSelectedPetId] = useState(() => {
-    const saved = localStorage.getItem('pawfecto_pets') || localStorage.getItem('pawsome_pets');
-    const petsList = saved ? JSON.parse(saved) : INITIAL_PETS;
-    if (petsList && petsList.length > 0) {
-      const randomIndex = Math.floor(Math.random() * petsList.length);
-      return petsList[randomIndex].id;
-    }
-    return 'all';
-  });
+  const [selectedPetId, setSelectedPetId] = useState('all');
   const [timeframe, setTimeframe] = useState('month'); // 'week' | 'month' | 'year' | 'specific' | 'custom'
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -112,52 +77,112 @@ export function AppProvider({ children }) {
   });
 
   // --- TOAST FEEDBACK ---
-  const showFeedback = (message, type = 'success') => {
+  const showFeedback = async (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        let hapticType = NotificationType.Success;
+        if (type === 'danger' || type === 'error') {
+          hapticType = NotificationType.Error;
+        } else if (type === 'warning') {
+          hapticType = NotificationType.Warning;
+        }
+        await Haptics.notification({ type: hapticType });
+      } catch (e) {
+        console.error("Haptics notification failed", e);
+      }
+    }
   };
 
-  // --- LOCAL STORAGE EFFECTS ---
+  // --- DATABASE INITIALIZATION & MIGRATION ---
   useEffect(() => {
-    localStorage.setItem('pawfecto_pets', JSON.stringify(pets));
-  }, [pets]);
+    const initializeApp = async () => {
+      try {
+        await migrateFromLocalStorage();
 
-  useEffect(() => {
-    localStorage.setItem('pawfecto_expenses', JSON.stringify(expenses));
-  }, [expenses]);
+        const savedPets = await getDBValue('pawfecto_pets');
+        const savedExpenses = await getDBValue('pawfecto_expenses');
+        const savedReminders = await getDBValue('pawfecto_reminders');
+        const savedTheme = await getDBValue('pawfecto_theme');
+        const savedCurrency = await getDBValue('pawfecto_currency');
 
-  useEffect(() => {
-    const limitDate = new Date();
-    limitDate.setMonth(limitDate.getMonth() - 3);
-
-    const pruned = reminders.filter(rem => {
-      if (rem.completed && rem.date) {
-        const parts = rem.date.split('-');
-        if (parts.length === 3) {
-          const [yr, mo, dy] = parts.map(Number);
-          const remDate = new Date(yr, mo - 1, dy);
-          if (remDate.getTime() < limitDate.getTime()) {
-            return false;
+        if (savedPets) {
+          setPets(savedPets);
+          if (savedPets.length > 0) {
+            const randomIndex = Math.floor(Math.random() * savedPets.length);
+            setSelectedPetId(savedPets[randomIndex].id);
           }
         }
+        if (savedExpenses) setExpenses(savedExpenses);
+        if (savedReminders) setReminders(savedReminders);
+        if (savedTheme) {
+          setTheme(savedTheme);
+          document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        if (savedCurrency) setCurrency(savedCurrency);
+      } catch (err) {
+        console.error('Failed to initialize database or migrate data:', err);
+      } finally {
+        setLoading(false);
       }
-      return true;
-    });
+    };
 
-    localStorage.setItem('pawfecto_reminders', JSON.stringify(pruned));
-    if (pruned.length !== reminders.length) {
-      setReminders(pruned);
+    initializeApp();
+  }, []);
+
+  // --- DATABASE WRITE EFFECTS ---
+  useEffect(() => {
+    if (!loading) {
+      setDBValue('pawfecto_pets', pets);
     }
-  }, [reminders]);
+  }, [pets, loading]);
 
   useEffect(() => {
-    localStorage.setItem('pawfecto_theme', theme);
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+    if (!loading) {
+      setDBValue('pawfecto_expenses', expenses);
+    }
+  }, [expenses, loading]);
 
   useEffect(() => {
-    localStorage.setItem('pawfecto_currency', currency);
-  }, [currency]);
+    if (!loading) {
+      const limitDate = new Date();
+      limitDate.setMonth(limitDate.getMonth() - 3);
+
+      const pruned = reminders.filter(rem => {
+        if (rem.completed && rem.date) {
+          const parts = rem.date.split('-');
+          if (parts.length === 3) {
+            const [yr, mo, dy] = parts.map(Number);
+            const remDate = new Date(yr, mo - 1, dy);
+            if (remDate.getTime() < limitDate.getTime()) {
+              return false;
+            }
+          }
+        }
+        return true;
+      });
+
+      setDBValue('pawfecto_reminders', pruned);
+      if (pruned.length !== reminders.length) {
+        setReminders(pruned);
+      }
+    }
+  }, [reminders, loading]);
+
+  useEffect(() => {
+    if (!loading) {
+      setDBValue('pawfecto_theme', theme);
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+  }, [theme, loading]);
+
+  useEffect(() => {
+    if (!loading) {
+      setDBValue('pawfecto_currency', currency);
+    }
+  }, [currency, loading]);
 
   // --- AUDIO ALARMS & DESKTOP ALERTS ---
   const triggerAlert = (reminder) => {
@@ -700,14 +725,14 @@ export function AppProvider({ children }) {
     reader.onload = (evt) => {
       try {
         const imported = JSON.parse(evt.target.result);
-        if (imported.pets && imported.expenses && imported.reminders) {
+        if (validateBackupData(imported)) {
           setPets(imported.pets);
           setExpenses(imported.expenses);
           setReminders(imported.reminders);
           if (imported.theme) setTheme(imported.theme);
           showFeedback('Backup database imported successfully! All records loaded.');
         } else {
-          showFeedback('Invalid backup file structure.', 'danger');
+          showFeedback('Invalid backup file structure or corrupted data.', 'danger');
         }
       } catch (err) {
         showFeedback('Error parsing JSON backup file.', 'danger');
@@ -922,6 +947,7 @@ export function AppProvider({ children }) {
       theme, setTheme,
       currency, setCurrency,
       currencySymbol,
+      loading,
 
       // Filter states
       activeTab, setActiveTab,
