@@ -105,6 +105,22 @@ export default function ReminderModal() {
             </select>
           </div>
 
+          <div className="form-group">
+            <label className="form-label">Early Reminder Option</label>
+            <select 
+              className="form-select" 
+              value={reminderForm.earlyReminder || '0'} 
+              onChange={(e) => setReminderForm({ ...reminderForm, earlyReminder: e.target.value })}
+            >
+              <option value="0">At time of event</option>
+              <option value="5">5 minutes before</option>
+              <option value="15">15 minutes before</option>
+              <option value="30">30 minutes before</option>
+              <option value="60">1 hour before</option>
+              <option value="1440">1 day before</option>
+            </select>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
             <button type="button" className="btn btn-secondary" onClick={() => setShowReminderModal(false)}>Cancel</button>
             <button type="submit" className="btn btn-primary">Schedule Task</button>

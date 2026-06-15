@@ -58,7 +58,7 @@ export function AppProvider({ children }) {
 
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null);
-  const [reminderForm, setReminderForm] = useState({ petId: '', type: 'Vaccine', title: '', date: '', time: '09:00', recurrence: 'none' });
+  const [reminderForm, setReminderForm] = useState({ petId: '', type: 'Vaccine', title: '', date: '', time: '09:00', recurrence: 'none', earlyReminder: '0' });
 
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [editingWeight, setEditingWeight] = useState(null);
@@ -135,6 +135,16 @@ export function AppProvider({ children }) {
   }, []);
 
   // --- DATABASE WRITE EFFECTS ---
+  const formatEarlyReminder = (minutesStr) => {
+    const mins = parseInt(minutesStr);
+    if (mins === 5) return '5 minutes';
+    if (mins === 15) return '15 minutes';
+    if (mins === 30) return '30 minutes';
+    if (mins === 60) return '1 hour';
+    if (mins === 1440) return '1 day';
+    return `${mins} minutes`;
+  };
+
   const syncLocalNotifications = async (currentReminders, currentPets) => {
     if (!Capacitor.isNativePlatform()) return;
 
@@ -170,23 +180,40 @@ export function AppProvider({ children }) {
         
         const scheduleDate = new Date(year, month - 1, day, hours, minutes, 0);
 
-        if (scheduleDate > now) {
-          const pet = currentPets.find(p => p.id === rem.petId);
-          const petName = pet ? pet.name : 'your pet';
-          
-          // Generate a stable numeric ID for the notification from the reminder ID string
-          let numericId = 0;
-          for (let i = 0; i < rem.id.length; i++) {
-            numericId = (numericId + rem.id.charCodeAt(i) * (i + 1)) % 2147483647;
-          }
+        // Generate a stable base numeric ID for the notification (max 1,000,000 to allow offset)
+        let numericId = 0;
+        for (let i = 0; i < rem.id.length; i++) {
+          numericId = (numericId + rem.id.charCodeAt(i) * (i + 1)) % 1000000;
+        }
 
+        const pet = currentPets.find(p => p.id === rem.petId);
+        const petName = pet ? pet.name : 'your pet';
+
+        // 3a. Schedule early reminder if set and in the future
+        const earlyMins = parseInt(rem.earlyReminder || '0');
+        if (earlyMins > 0) {
+          const earlyScheduleDate = new Date(scheduleDate.getTime() - (earlyMins * 60 * 1000));
+          if (earlyScheduleDate > now) {
+            notificationsToSchedule.push({
+              title: `Pawfecto: Early Alert ⏰`,
+              body: `${rem.title} is due for ${petName} in ${formatEarlyReminder(rem.earlyReminder)}!`,
+              id: numericId + 1000000,
+              schedule: { at: earlyScheduleDate },
+              sound: null,
+              extra: { reminderId: rem.id, type: 'early' }
+            });
+          }
+        }
+
+        // 3b. Schedule actual reminder if in the future
+        if (scheduleDate > now) {
           notificationsToSchedule.push({
             title: `Pawfecto: ${rem.type} Alert 🐾`,
             body: `${rem.title} is due for ${petName}!`,
             id: numericId,
             schedule: { at: scheduleDate },
             sound: null, // default system sound
-            extra: { reminderId: rem.id }
+            extra: { reminderId: rem.id, type: 'actual' }
           });
         }
       });
@@ -513,7 +540,8 @@ export function AppProvider({ children }) {
       title: '',
       date: new Date().toISOString().split('T')[0],
       time: '09:00',
-      recurrence: 'none'
+      recurrence: 'none',
+      earlyReminder: '0'
     });
     setShowReminderModal(true);
   };
@@ -533,6 +561,7 @@ export function AppProvider({ children }) {
       date: reminderForm.date || new Date().toISOString().split('T')[0],
       time: reminderForm.time || '09:00',
       recurrence: reminderForm.recurrence || 'none',
+      earlyReminder: reminderForm.earlyReminder || '0',
       completed: editingReminder ? editingReminder.completed : false
     };
 
