@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { 
   INITIAL_PETS, 
   INITIAL_EXPENSES, 
@@ -133,6 +135,73 @@ export function AppProvider({ children }) {
   }, []);
 
   // --- DATABASE WRITE EFFECTS ---
+  const syncLocalNotifications = async (currentReminders, currentPets) => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    try {
+      // 1. Check/request display permissions
+      const permStatus = await LocalNotifications.checkPermissions();
+      if (permStatus.display !== 'granted') {
+        const reqStatus = await LocalNotifications.requestPermissions();
+        if (reqStatus.display !== 'granted') {
+          console.log('Local notifications display permission not granted');
+          return;
+        }
+      }
+
+      // 2. Get and cancel all pending notifications scheduled by Pawfecto
+      const pending = await LocalNotifications.getPending();
+      if (pending.notifications.length > 0) {
+        await LocalNotifications.cancel({
+          notifications: pending.notifications.map(n => ({ id: n.id }))
+        });
+      }
+
+      // 3. Schedule active future reminders
+      const now = new Date();
+      const notificationsToSchedule = [];
+
+      currentReminders.forEach(rem => {
+        if (rem.completed) return;
+
+        const remTime = rem.time || '09:00';
+        const [year, month, day] = rem.date.split('-').map(Number);
+        const [hours, minutes] = remTime.split(':').map(Number);
+        
+        const scheduleDate = new Date(year, month - 1, day, hours, minutes, 0);
+
+        if (scheduleDate > now) {
+          const pet = currentPets.find(p => p.id === rem.petId);
+          const petName = pet ? pet.name : 'your pet';
+          
+          // Generate a stable numeric ID for the notification from the reminder ID string
+          let numericId = 0;
+          for (let i = 0; i < rem.id.length; i++) {
+            numericId = (numericId + rem.id.charCodeAt(i) * (i + 1)) % 2147483647;
+          }
+
+          notificationsToSchedule.push({
+            title: `Pawfecto: ${rem.type} Alert 🐾`,
+            body: `${rem.title} is due for ${petName}!`,
+            id: numericId,
+            schedule: { at: scheduleDate },
+            sound: null, // default system sound
+            extra: { reminderId: rem.id }
+          });
+        }
+      });
+
+      if (notificationsToSchedule.length > 0) {
+        await LocalNotifications.schedule({
+          notifications: notificationsToSchedule
+        });
+        console.log(`Successfully scheduled ${notificationsToSchedule.length} local notifications.`);
+      }
+    } catch (error) {
+      console.error('Error syncing local notifications:', error);
+    }
+  };
+
   useEffect(() => {
     if (!loading) {
       setDBValue('pawfecto_pets', pets);
@@ -167,9 +236,11 @@ export function AppProvider({ children }) {
       setDBValue('pawfecto_reminders', pruned);
       if (pruned.length !== reminders.length) {
         setReminders(pruned);
+      } else {
+        syncLocalNotifications(reminders, pets);
       }
     }
-  }, [reminders, loading]);
+  }, [reminders, loading, pets]);
 
   useEffect(() => {
     if (!loading) {
