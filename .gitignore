@@ -29,15 +29,10 @@ build/
 *.sw?
 .DS_Store
 
-# Mobile / Capacitor specific build directories
-/android/app/build/
-/android/app/src/main/assets/public/
-/android/app/src/main/assets/capacitor.plugins.json
-/android/capacitor-cordova-android-plugins/
-/ios/App/App/public/
-/ios/App/App/capacitor.plugins.json
-/ios/App/pods/
-/ios/App/Podfile.lock
+# Mobile / Capacitor folders
+/android/
+/ios/
+
 
 # AI Agent files
 Plan.md
