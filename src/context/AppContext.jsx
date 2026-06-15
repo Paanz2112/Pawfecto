@@ -145,6 +145,42 @@ export function AppProvider({ children }) {
     return `${mins} minutes`;
   };
 
+  const getWarmReminderMessage = (rem, petName, isEarly, timeLabel = '') => {
+    const title = isEarly ? `Friendly check-in from Pawfecto ❤️` : `Time for a pet care moment! 🐾`;
+    const details = rem.title ? rem.title : 'something special';
+    
+    let body = '';
+    const type = (rem.type || '').toLowerCase();
+    
+    if (isEarly) {
+      if (type === 'vaccine') {
+        body = `Just a heads-up! ${petName}'s ${details} is coming up in ${timeLabel}. Let's get ready! 💉`;
+      } else if (type === 'medication') {
+        body = `Friendly nudge: It's almost time for ${petName}'s ${details} in ${timeLabel}. 💊`;
+      } else if (type === 'grooming') {
+        body = `Pamper time is close! ${petName}'s ${details} starts in ${timeLabel}. 🛁`;
+      } else if (type === 'checkup') {
+        body = `Vet appointment check: ${petName}'s ${details} is in ${timeLabel}. 🏥`;
+      } else {
+        body = `Just a little reminder that ${petName}'s ${details} is scheduled in ${timeLabel}. 💕`;
+      }
+    } else {
+      if (type === 'vaccine') {
+        body = `Time for ${petName}'s ${details}! Keep them healthy and strong! 🌟`;
+      } else if (type === 'medication') {
+        body = `It's time to give ${petName} their ${details}. Thank you for taking such good care of them! ❤️`;
+      } else if (type === 'grooming') {
+        body = `Time for grooming! Let's get ${petName} looking and feeling fresh! 🧼`;
+      } else if (type === 'checkup') {
+        body = `It's time for ${petName}'s ${details}. Hope everything goes well! 🏥`;
+      } else {
+        body = `It's time for ${petName}'s ${details} now! 🥰`;
+      }
+    }
+    
+    return { title, body };
+  };
+
   const syncLocalNotifications = async (currentReminders, currentPets) => {
     if (!Capacitor.isNativePlatform()) return;
 
@@ -194,9 +230,11 @@ export function AppProvider({ children }) {
         if (earlyMins > 0) {
           const earlyScheduleDate = new Date(scheduleDate.getTime() - (earlyMins * 60 * 1000));
           if (earlyScheduleDate > now) {
+            const timeLabel = formatEarlyReminder(rem.earlyReminder);
+            const { title, body } = getWarmReminderMessage(rem, petName, true, timeLabel);
             notificationsToSchedule.push({
-              title: `Pawfecto: Early Alert ⏰`,
-              body: `${rem.title} is due for ${petName} in ${formatEarlyReminder(rem.earlyReminder)}!`,
+              title,
+              body,
               id: numericId + 1000000,
               schedule: { at: earlyScheduleDate },
               sound: null,
@@ -207,9 +245,10 @@ export function AppProvider({ children }) {
 
         // 3b. Schedule actual reminder if in the future
         if (scheduleDate > now) {
+          const { title, body } = getWarmReminderMessage(rem, petName, false);
           notificationsToSchedule.push({
-            title: `Pawfecto: ${rem.type} Alert 🐾`,
-            body: `${rem.title} is due for ${petName}!`,
+            title,
+            body,
             id: numericId,
             schedule: { at: scheduleDate },
             sound: null, // default system sound
@@ -286,13 +325,13 @@ export function AppProvider({ children }) {
   const triggerAlert = (reminder) => {
     const pet = pets.find(p => p.id === reminder.petId);
     const petName = pet ? pet.name : 'your pet';
-    const message = `${reminder.title} scheduled for ${petName}!`;
+    const { title, body } = getWarmReminderMessage(reminder, petName, false);
 
     // 1. Native Desktop Notification
     if ('Notification' in window && Notification.permission === 'granted') {
       try {
-        new Notification('Pawfecto Reminder 🐾', {
-          body: message,
+        new Notification(title, {
+          body: body,
           icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐾</text></svg>'
         });
       } catch (e) {
