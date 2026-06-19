@@ -1,8 +1,4 @@
-// --- INPUT SANITIZER ---
-export const sanitizeInput = (val) => {
-  if (typeof val !== 'string') return val;
-  return val.replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
-};
+// ponytail: deleted sanitizeInput since React handles XSS auto-escaping by default.
 
 // --- AGE CALCULATOR ---
 export const getAge = (birthdateString) => {

@@ -9,7 +9,6 @@ import {
   categoryColors 
 } from '../utils/constants';
 import { 
-  sanitizeInput, 
   getAge, 
   parseLocalDate, 
   getNextOccurrence,
@@ -135,49 +134,25 @@ export function AppProvider({ children }) {
   }, []);
 
   // --- DATABASE WRITE EFFECTS ---
+  // ponytail: simplified formatting logic & dictionary lookup templates to reduce over-engineering and lines of code.
   const formatEarlyReminder = (minutesStr) => {
     const mins = parseInt(minutesStr);
-    if (mins === 5) return '5 minutes';
-    if (mins === 15) return '15 minutes';
-    if (mins === 30) return '30 minutes';
-    if (mins === 60) return '1 hour';
-    if (mins === 1440) return '1 day';
-    return `${mins} minutes`;
+    return mins === 60 ? '1 hour' : mins === 1440 ? '1 day' : `${mins} minutes`;
   };
 
   const getWarmReminderMessage = (rem, petName, isEarly, timeLabel = '') => {
-    const title = isEarly ? `Friendly check-in from Pawfecto ❤️` : `Time for a pet care moment! 🐾`;
-    const details = rem.title ? rem.title : 'something special';
-    
-    let body = '';
+    const title = isEarly ? 'Friendly check-in from Pawfecto ❤️' : 'Time for a pet care moment! 🐾';
+    const details = rem.title || 'something special';
     const type = (rem.type || '').toLowerCase();
     
-    if (isEarly) {
-      if (type === 'vaccine') {
-        body = `Just a heads-up! ${petName}'s ${details} is coming up in ${timeLabel}. Let's get ready! 💉`;
-      } else if (type === 'medication') {
-        body = `Friendly nudge: It's almost time for ${petName}'s ${details} in ${timeLabel}. 💊`;
-      } else if (type === 'grooming') {
-        body = `Pamper time is close! ${petName}'s ${details} starts in ${timeLabel}. 🛁`;
-      } else if (type === 'checkup') {
-        body = `Vet appointment check: ${petName}'s ${details} is in ${timeLabel}. 🏥`;
-      } else {
-        body = `Just a little reminder that ${petName}'s ${details} is scheduled in ${timeLabel}. 💕`;
-      }
-    } else {
-      if (type === 'vaccine') {
-        body = `Time for ${petName}'s ${details}! Keep them healthy and strong! 🌟`;
-      } else if (type === 'medication') {
-        body = `It's time to give ${petName} their ${details}. Thank you for taking such good care of them! ❤️`;
-      } else if (type === 'grooming') {
-        body = `Time for grooming! Let's get ${petName} looking and feeling fresh! 🧼`;
-      } else if (type === 'checkup') {
-        body = `It's time for ${petName}'s ${details}. Hope everything goes well! 🏥`;
-      } else {
-        body = `It's time for ${petName}'s ${details} now! 🥰`;
-      }
-    }
-    
+    const templates = {
+      vaccine: isEarly ? `Just a heads-up! ${petName}'s ${details} is coming up in ${timeLabel}. Let's get ready! 💉` : `Time for ${petName}'s ${details}! Keep them healthy and strong! 🌟`,
+      medication: isEarly ? `Friendly nudge: It's almost time for ${petName}'s ${details} in ${timeLabel}. 💊` : `It's time to give ${petName} their ${details}. Thank you for taking such good care of them! ❤️`,
+      grooming: isEarly ? `Pamper time is close! ${petName}'s ${details} starts in ${timeLabel}. 🛁` : `Time for grooming! Let's get ${petName} looking and feeling fresh! 🧼`,
+      checkup: isEarly ? `Vet appointment check: ${petName}'s ${details} is in ${timeLabel}. 🏥` : `It's time for ${petName}'s ${details}. Hope everything goes well! 🏥`
+    };
+
+    const body = templates[type] || (isEarly ? `Just a little reminder that ${petName}'s ${details} is scheduled in ${timeLabel}. 💕` : `It's time for ${petName}'s ${details} now! 🥰`);
     return { title, body };
   };
 
@@ -464,35 +439,35 @@ export function AppProvider({ children }) {
     if (e) e.preventDefault();
     if (!petForm.name.trim()) return showFeedback('Pet name is required.', 'danger');
     
-    const sanitizedName = sanitizeInput(petForm.name);
-    const sanitizedBreed = sanitizeInput(petForm.breed);
-    const sanitizedNotes = sanitizeInput(petForm.notes);
+    const nameTrimmed = petForm.name.trim();
+    const breedTrimmed = petForm.breed.trim();
+    const notesTrimmed = petForm.notes.trim();
 
     if (editingPet) {
       setPets(pets.map(p => p.id === editingPet.id ? { 
         ...p, 
-        name: sanitizedName, 
+        name: nameTrimmed, 
         species: petForm.species, 
-        breed: sanitizedBreed, 
+        breed: breedTrimmed, 
         birthdate: petForm.birthdate, 
-        notes: sanitizedNotes,
+        notes: notesTrimmed,
         photo: petForm.photo
       } : p));
-      showFeedback(`Successfully updated ${sanitizedName}!`);
+      showFeedback(`Successfully updated ${nameTrimmed}!`);
     } else {
       const newPet = {
         id: Date.now().toString(),
-        name: sanitizedName,
+        name: nameTrimmed,
         species: petForm.species,
-        breed: sanitizedBreed,
+        breed: breedTrimmed,
         birthdate: petForm.birthdate,
-        notes: sanitizedNotes,
+        notes: notesTrimmed,
         photo: petForm.photo,
         weightLogs: [],
         vaccineLogs: []
       };
       setPets([...pets, newPet]);
-      showFeedback(`Added ${sanitizedName} to your family!`);
+      showFeedback(`Added ${nameTrimmed} to your family!`);
     }
     setShowPetModal(false);
   };
@@ -538,7 +513,7 @@ export function AppProvider({ children }) {
     if (!expenseForm.petId) return showFeedback('Please select a pet.', 'danger');
     if (isNaN(amountVal) || amountVal <= 0) return showFeedback('Please enter a valid expense amount.', 'danger');
     
-    const sanitizedDesc = sanitizeInput(expenseForm.description);
+    const descriptionTrimmed = expenseForm.description.trim();
 
     const expenseData = {
       id: editingExpense ? editingExpense.id : Date.now().toString(),
@@ -546,7 +521,7 @@ export function AppProvider({ children }) {
       category: expenseForm.category,
       amount: amountVal,
       date: expenseForm.date || new Date().toISOString().split('T')[0],
-      description: sanitizedDesc
+      description: descriptionTrimmed
     };
 
     if (editingExpense) {
@@ -590,13 +565,13 @@ export function AppProvider({ children }) {
     if (!reminderForm.petId) return showFeedback('Please select a pet.', 'danger');
     if (!reminderForm.title.trim()) return showFeedback('Please specify reminder details.', 'danger');
 
-    const sanitizedTitle = sanitizeInput(reminderForm.title);
+    const titleTrimmed = reminderForm.title.trim();
 
     const reminderData = {
       id: editingReminder ? editingReminder.id : Date.now().toString(),
       petId: reminderForm.petId,
       type: reminderForm.type,
-      title: sanitizedTitle,
+      title: titleTrimmed,
       date: reminderForm.date || new Date().toISOString().split('T')[0],
       time: reminderForm.time || '09:00',
       recurrence: reminderForm.recurrence || 'none',
@@ -771,9 +746,9 @@ export function AppProvider({ children }) {
     if (!vaccineForm.vaccineName.trim()) return showFeedback('Please enter vaccine name.', 'danger');
     if (!vaccineForm.date) return showFeedback('Please specify vaccine date.', 'danger');
 
-    const nameClean = sanitizeInput(vaccineForm.vaccineName);
-    const brandClean = sanitizeInput(vaccineForm.brand);
-    const notesClean = sanitizeInput(vaccineForm.notes);
+    const nameClean = vaccineForm.vaccineName.trim();
+    const brandClean = vaccineForm.brand.trim();
+    const notesClean = vaccineForm.notes.trim();
 
     setPets(pets.map(p => {
       if (p.id === vaccineForm.petId) {
