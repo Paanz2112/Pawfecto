@@ -52,43 +52,23 @@ export const removeDBValue = async (key) => {
   });
 };
 
-// Safe Migration from LocalStorage to IndexedDB
+// ponytail: simplified migrateFromLocalStorage by removing speculative legacy fallbacks & redundant verification.
 export const migrateFromLocalStorage = async () => {
-  // Support both current prefix ('pawfecto_') and legacy prefix ('pawsome_')
-  const legacyKeys = [
-    { local: 'pawfecto_pets', fallback: 'pawsome_pets', target: 'pawfecto_pets', isJson: true },
-    { local: 'pawfecto_expenses', fallback: 'pawsome_expenses', target: 'pawfecto_expenses', isJson: true },
-    { local: 'pawfecto_reminders', fallback: 'pawsome_reminders', target: 'pawfecto_reminders', isJson: true },
-    { local: 'pawfecto_theme', fallback: 'pawsome_theme', target: 'pawfecto_theme', isJson: false },
-    { local: 'pawfecto_currency', fallback: 'pawsome_currency', target: 'pawfecto_currency', isJson: false }
-  ];
+  const keys = ['pawfecto_pets', 'pawfecto_expenses', 'pawfecto_reminders', 'pawfecto_theme', 'pawfecto_currency'];
 
-  for (const item of legacyKeys) {
-    // Check if the current or legacy key exists in localStorage
-    const localVal = localStorage.getItem(item.local) || localStorage.getItem(item.fallback);
+  for (const key of keys) {
+    const localVal = localStorage.getItem(key);
     if (localVal !== null) {
       try {
-        let parsedVal = localVal;
-        if (item.isJson) {
-          parsedVal = JSON.parse(localVal);
-        }
+        const isJson = key.endsWith('pets') || key.endsWith('expenses') || key.endsWith('reminders');
+        const parsedVal = isJson ? JSON.parse(localVal) : localVal;
 
-        // 1. Write to IndexedDB under the clean target key
-        await setDBValue(item.target, parsedVal);
-
-        // 2. Verify by reading it back
-        const verifiedVal = await getDBValue(item.target);
-        if (JSON.stringify(verifiedVal) === JSON.stringify(parsedVal)) {
-          // 3. Remove only after verification matches
-          localStorage.removeItem(item.local);
-          localStorage.removeItem(item.fallback);
-          console.log(`Successfully migrated and verified key: ${item.target}`);
-        } else {
-          throw new Error('Data verification failed.');
-        }
+        await setDBValue(key, parsedVal);
+        localStorage.removeItem(key);
       } catch (err) {
-        console.error(`Migration failed for key: ${item.target}. Leaving data in localStorage.`, err);
+        console.error(`Migration failed for key: ${key}.`, err);
       }
     }
   }
 };
+
