@@ -186,24 +186,31 @@ export default function DashboardTab() {
                   <span>Weight Analysis</span>
                 </div>
                 {(() => {
-                  let activePetForWeight = currentPet;
-                  if (selectedPetId === 'all' && pets.length > 0) {
-                    activePetForWeight = pets[0];
-                  }
-                  const logs = getFilteredByTimeframe(activePetForWeight?.weightLogs || [], 'date');
-                  if (!activePetForWeight || logs.length === 0) {
+                  const petsToAnalyze = selectedPetId === 'all' ? pets : (currentPet ? [currentPet] : []);
+                  const petsWithLogs = petsToAnalyze.filter(p => getFilteredByTimeframe(p.weightLogs || [], 'date').length > 0);
+
+                  if (petsWithLogs.length === 0) {
                     return <p className="insight-empty">No weight data logged for this period.</p>;
                   }
-                  const analysis = getWeightAnalysis(logs, activePetForWeight);
-                  return (
-                    <div className="insight-detail">
-                      <div className="insight-row">
-                        <span>Period Avg:</span>
-                        <strong>{analysis.avg} kg</strong>
+
+                  return petsWithLogs.map(pet => {
+                    const logs = getFilteredByTimeframe(pet.weightLogs || [], 'date');
+                    const analysis = getWeightAnalysis(logs, pet);
+                    return (
+                      <div key={pet.id} className="insight-detail" style={{ marginTop: '0.5rem', borderTop: petsWithLogs.length > 1 ? '1px solid var(--border-color)' : 'none', paddingTop: petsWithLogs.length > 1 ? '0.5rem' : '0' }}>
+                        {petsWithLogs.length > 1 && (
+                          <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-main)', marginBottom: '0.25rem' }}>
+                            {pet.name}
+                          </div>
+                        )}
+                        <div className="insight-row">
+                          <span>Period Avg:</span>
+                          <strong>{analysis.avg} kg</strong>
+                        </div>
+                        <p className={`insight-desc border-${analysis.status}`}>{analysis.text}</p>
                       </div>
-                      <p className={`insight-desc border-${analysis.status}`}>{analysis.text}</p>
-                    </div>
-                  );
+                    );
+                  });
                 })()}
               </div>
 
@@ -393,52 +400,59 @@ export default function DashboardTab() {
           <div style={{ marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1.25rem' }}>
             <h4 style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <Scale size={16} style={{ color: 'var(--primary)' }} />
-              Weight Trend ({selectedPetId === 'all' ? (pets[0]?.name || 'No Pet') : (currentPet?.name || 'Selected Pet')})
+              Weight Trends {selectedPetId === 'all' ? '(All Pets)' : `(${currentPet?.name || 'Selected Pet'})`}
             </h4>
             {(() => {
-              let activePetForWeight = currentPet;
-              if (selectedPetId === 'all' && pets.length > 0) {
-                activePetForWeight = pets[0];
-              }
-              const logs = getFilteredByTimeframe(activePetForWeight?.weightLogs || [], 'date');
-              if (!activePetForWeight || logs.length === 0) {
+              const petsToAnalyze = selectedPetId === 'all' ? pets : (currentPet ? [currentPet] : []);
+              const petsWithLogs = petsToAnalyze.filter(p => getFilteredByTimeframe(p.weightLogs || [], 'date').length > 0);
+
+              if (petsWithLogs.length === 0) {
                 return <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No weight data logged for this period.</p>;
               }
-              const analysis = getWeightAnalysis(logs, activePetForWeight);
-              return (
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Period Avg:</span>
-                    <span style={{ fontWeight: '700' }}>{analysis.avg} kg</span>
+
+              return petsWithLogs.map(pet => {
+                const logs = getFilteredByTimeframe(pet.weightLogs || [], 'date');
+                const analysis = getWeightAnalysis(logs, pet);
+                return (
+                  <div key={pet.id} style={{ marginBottom: petsWithLogs.length > 1 ? '1.25rem' : '0' }}>
+                    {petsWithLogs.length > 1 && (
+                      <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-main)', marginBottom: '0.25rem' }}>
+                        {pet.name}:
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Period Avg:</span>
+                      <span style={{ fontWeight: '700' }}>{analysis.avg} kg</span>
+                    </div>
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '0.5rem', 
+                      alignItems: 'flex-start',
+                      padding: '0.6rem 0.8rem', 
+                      borderRadius: '8px', 
+                      fontSize: '0.8rem', 
+                      lineHeight: '1.4',
+                      backgroundColor: analysis.status === 'danger' ? 'rgba(239, 68, 68, 0.1)' : 
+                                       analysis.status === 'warning' ? 'rgba(245, 158, 11, 0.1)' : 
+                                       analysis.status === 'success' ? 'rgba(16, 185, 129, 0.1)' : 
+                                       'rgba(99, 102, 241, 0.05)',
+                      color: analysis.status === 'danger' ? 'var(--danger)' : 
+                             analysis.status === 'warning' ? '#d97706' : 
+                             analysis.status === 'success' ? 'var(--success)' : 
+                             'var(--text-main)',
+                      borderLeft: `3px solid ${
+                        analysis.status === 'danger' ? 'var(--danger)' : 
+                        analysis.status === 'warning' ? '#f59e0b' : 
+                        analysis.status === 'success' ? 'var(--success)' : 
+                        'var(--primary)'
+                      }`
+                    }}>
+                      <span>💡</span>
+                      <span>{analysis.text}</span>
+                    </div>
                   </div>
-                  <div style={{ 
-                    display: 'flex', 
-                    gap: '0.5rem', 
-                    alignItems: 'flex-start',
-                    padding: '0.6rem 0.8rem', 
-                    borderRadius: '8px', 
-                    fontSize: '0.8rem', 
-                    lineHeight: '1.4',
-                    backgroundColor: analysis.status === 'danger' ? 'rgba(239, 68, 68, 0.1)' : 
-                                     analysis.status === 'warning' ? 'rgba(245, 158, 11, 0.1)' : 
-                                     analysis.status === 'success' ? 'rgba(16, 185, 129, 0.1)' : 
-                                     'rgba(99, 102, 241, 0.05)',
-                    color: analysis.status === 'danger' ? 'var(--danger)' : 
-                           analysis.status === 'warning' ? '#d97706' : 
-                           analysis.status === 'success' ? 'var(--success)' : 
-                           'var(--text-main)',
-                    borderLeft: `3px solid ${
-                      analysis.status === 'danger' ? 'var(--danger)' : 
-                      analysis.status === 'warning' ? '#f59e0b' : 
-                      analysis.status === 'success' ? 'var(--success)' : 
-                      'var(--primary)'
-                    }`
-                  }}>
-                    <span>💡</span>
-                    <span>{analysis.text}</span>
-                  </div>
-                </div>
-              );
+                );
+              });
             })()}
           </div>
 

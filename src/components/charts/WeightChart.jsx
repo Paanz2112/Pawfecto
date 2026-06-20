@@ -1,20 +1,52 @@
 import React from 'react';
 import { Scale } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer 
+} from 'recharts';
 
 export default function WeightChart() {
-  const { pets, selectedPetId, getFilteredByTimeframe, openAddWeight } = useApp();
+  const { pets, selectedPetId, openAddWeight } = useApp();
 
-  let activePet = pets[0];
-  if (selectedPetId !== 'all') {
-    activePet = pets.find(p => p.id === selectedPetId);
+  const palette = [
+    '#6366f1', // Indigo (Primary)
+    '#ec4899', // Pink (Secondary)
+    '#10b981', // Emerald (Success)
+    '#f59e0b', // Amber (Accent)
+    '#ef4444', // Red (Danger)
+    '#8b5cf6', // Violet
+    '#0ea5e9'  // Sky
+  ];
+
+  // If no pets exist at all
+  if (!pets || pets.length === 0) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '250px', color: 'var(--text-muted)' }}>
+        <Scale size={32} style={{ marginBottom: '0.5rem' }} />
+        <p>No registered pets yet.</p>
+      </div>
+    );
   }
 
-  if (!activePet || !activePet.weightLogs || activePet.weightLogs.length === 0) {
+  // Determine which pets' data to display
+  const displayPets = selectedPetId === 'all' ? pets : pets.filter(p => p.id === selectedPetId);
+
+  // Check if there are any logs at all
+  const hasAnyLogs = displayPets.some(p => p.weightLogs && p.weightLogs.length > 0);
+
+  if (!hasAnyLogs) {
+    const activePet = selectedPetId !== 'all' ? pets.find(p => p.id === selectedPetId) : null;
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '160px', color: 'var(--text-muted)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '250px', color: 'var(--text-muted)' }}>
         <Scale size={32} style={{ marginBottom: '0.5rem' }} />
-        <p>No weight logs yet for {activePet?.name || 'this pet'}.</p>
+        <p>No weight logs yet for {activePet ? activePet.name : 'any pet'}.</p>
         <button className="btn btn-secondary" style={{ marginTop: '0.75rem', padding: '0.4rem 1rem', fontSize: '0.8rem' }} onClick={openAddWeight}>
           Log First Weight
         </button>
@@ -22,96 +54,110 @@ export default function WeightChart() {
     );
   }
 
-  const logs = getFilteredByTimeframe(activePet.weightLogs || [], 'date');
-  const padding = 30;
-  const chartWidth = 500;
-  const chartHeight = 160;
+  // Get all unique dates from all selected pets, sorted chronologically
+  const allDates = Array.from(new Set(
+    displayPets.flatMap(p => p.weightLogs?.map(l => l.date) || [])
+  )).sort((a, b) => new Date(a) - new Date(b));
 
-  if (logs.length === 0) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '160px', color: 'var(--text-muted)' }}>
-        <Scale size={32} style={{ marginBottom: '0.5rem' }} />
-        <p>No logs found for this timeframe.</p>
-      </div>
-    );
-  }
-
-  const weights = logs.map(l => l.weight);
-  const maxWeight = Math.max(...weights) * 1.15;
-  const minWeight = Math.min(...weights) * 0.85;
-  const weightRange = maxWeight - minWeight === 0 ? 1 : maxWeight - minWeight;
-
-  const points = logs.map((log, index) => {
-    const x = padding + (index * (chartWidth - 2 * padding)) / (logs.length - 1 || 1);
-    const y = chartHeight - padding - ((log.weight - minWeight) * (chartHeight - 2 * padding)) / weightRange;
-    return { x, y, ...log };
+  // Format data for Recharts
+  // Output format: [ { dateLabel: '01/15', Bella: 12.5, Milo: 4.2 }, ... ]
+  const chartData = allDates.map(date => {
+    const dataPoint = { 
+      dateLabel: date.split('-').slice(1).join('/'), // e.g., "06/15"
+      fullDate: date 
+    };
+    
+    displayPets.forEach(pet => {
+      const log = pet.weightLogs?.find(l => l.date === date);
+      if (log) {
+        dataPoint[pet.name] = log.weight;
+      }
+    });
+    return dataPoint;
   });
 
-  const pathD = points.reduce((acc, p, index) => {
-    return index === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`;
-  }, '');
-
-  const areaD = points.length > 0 
-    ? `${pathD} L ${points[points.length - 1].x} ${chartHeight - padding} L ${points[0].x} ${chartHeight - padding} Z`
-    : '';
+  // Custom Tooltip formatter
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div style={{
+          backgroundColor: 'var(--bg-card)',
+          padding: '1rem',
+          border: '1px solid var(--border-color)',
+          borderRadius: 'var(--radius-md)',
+          boxShadow: 'var(--shadow-md)',
+          minWidth: '150px'
+        }}>
+          <p style={{ fontWeight: '600', marginBottom: '0.5rem', color: 'var(--text-main)', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+            {payload[0].payload.fullDate}
+          </p>
+          {payload.map((entry, index) => (
+            <div key={`item-${index}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: entry.color, display: 'inline-block' }}></span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{entry.name}:</span>
+              <span style={{ fontWeight: '700', marginLeft: 'auto', color: entry.color }}>{entry.value} kg</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
-    <div style={{ width: '100%', overflowX: 'auto' }}>
-      <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} width="100%" height="100%">
-        <defs>
-          <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.25" />
-            <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <line x1={padding} y1={chartHeight - padding} x2={chartWidth - padding} y2={chartHeight - padding} stroke="var(--border-color)" strokeWidth="1" />
-        <line x1={padding} y1={padding} x2={chartWidth - padding} y2={padding} stroke="var(--border-color)" strokeDasharray="3 3" strokeWidth="1" />
-
-        {areaD && <path d={areaD} fill="url(#chartGrad)" />}
-
-        {pathD && (
-          <path
-            d={pathD}
-            fill="none"
-            stroke="var(--primary)"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+    <div style={{ width: '100%', height: '300px', marginTop: '1rem' }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={chartData} margin={{ top: 10, right: 20, left: -20, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
+          
+          <XAxis 
+            dataKey="dateLabel" 
+            stroke="var(--text-muted)" 
+            tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 500 }} 
+            tickMargin={10}
+            axisLine={{ stroke: 'var(--border-color)' }}
+            tickLine={false}
           />
-        )}
-
-        {points.map((p, idx) => (
-          <g key={idx}>
-            <circle
-              cx={p.x}
-              cy={p.y}
-              r="5"
-              fill="var(--bg-card)"
-              stroke="var(--primary)"
-              strokeWidth="3"
+          
+          <YAxis 
+            stroke="var(--text-muted)" 
+            tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 500 }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={(value) => `${value}kg`}
+            domain={['auto', 'auto']}
+          />
+          
+          <Tooltip content={<CustomTooltip />} />
+          
+          {displayPets.length > 1 && (
+            <Legend 
+              iconType="circle" 
+              wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: 600 }}
             />
-            <text
-              x={p.x}
-              y={p.y - 10}
-              textAnchor="middle"
-              fontSize="10"
-              fontWeight="700"
-              fill="var(--text-main)"
-            >
-              {p.weight} kg
-            </text>
-            <text
-              x={p.x}
-              y={chartHeight - 10}
-              textAnchor="middle"
-              fontSize="9"
-              fill="var(--text-muted)"
-            >
-              {p.date.split('-').slice(1).join('/')}
-            </text>
-          </g>
-        ))}
-      </svg>
+          )}
+
+          {displayPets.map((pet, idx) => {
+            const hasData = pet.weightLogs && pet.weightLogs.length > 0;
+            if (!hasData) return null;
+            
+            const color = palette[idx % palette.length];
+            return (
+              <Line
+                key={pet.id}
+                type="monotone"
+                dataKey={pet.name}
+                stroke={color}
+                strokeWidth={3}
+                dot={{ r: 4, strokeWidth: 2, fill: 'var(--bg-card)', stroke: color }}
+                activeDot={{ r: 6, strokeWidth: 0, fill: color }}
+                connectNulls={true}
+                animationDuration={800}
+              />
+            );
+          })}
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }

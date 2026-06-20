@@ -109,15 +109,26 @@ export function AppProvider({ children }) {
         const savedTheme = await getDBValue('pawfecto_theme');
         const savedCurrency = await getDBValue('pawfecto_currency');
 
-        if (savedPets) {
+        if (savedPets !== undefined && savedPets !== null) {
           setPets(savedPets);
           if (savedPets.length > 0) {
             const randomIndex = Math.floor(Math.random() * savedPets.length);
             setSelectedPetId(savedPets[randomIndex].id);
           }
+        } else if (INITIAL_PETS.length > 0) {
+          setPets(INITIAL_PETS);
+          setSelectedPetId(INITIAL_PETS[0].id);
         }
-        if (savedExpenses) setExpenses(savedExpenses);
-        if (savedReminders) setReminders(savedReminders);
+        if (savedExpenses !== undefined && savedExpenses !== null) {
+          setExpenses(savedExpenses);
+        } else if (INITIAL_EXPENSES.length > 0) {
+          setExpenses(INITIAL_EXPENSES);
+        }
+        if (savedReminders !== undefined && savedReminders !== null) {
+          setReminders(savedReminders);
+        } else if (INITIAL_REMINDERS.length > 0) {
+          setReminders(INITIAL_REMINDERS);
+        }
         if (savedTheme) {
           setTheme(savedTheme);
           document.documentElement.setAttribute('data-theme', savedTheme);
