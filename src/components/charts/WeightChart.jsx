@@ -54,9 +54,11 @@ export default function WeightChart() {
     );
   }
 
-  // Modern chart padding (with left padding for Y-axis labels)
+  const isMulti = seriesData.length > 1;
+
+  // Modern chart padding (extend right padding for direct labels if multi-pet view)
   const paddingLeft = 45;
-  const paddingRight = 25;
+  const paddingRight = isMulti ? 105 : 25;
   const paddingTop = 25;
   const paddingBottom = 30;
   
@@ -123,6 +125,48 @@ export default function WeightChart() {
     const val = minWeight + (i * (maxWeight - minWeight)) / (gridLevels - 1 || 1);
     const y = chartHeight - paddingBottom - ((val - minWeight) * (chartHeight - paddingTop - paddingBottom)) / weightRange;
     gridLines.push({ val, y });
+  }
+
+  // Calculate direct end-of-line labels with collision avoidance
+  const endLabels = [];
+  if (isMulti) {
+    const labelsRaw = seriesWithPoints
+      .filter(s => s.points.length > 0)
+      .map(s => {
+        const lastPt = s.points[s.points.length - 1];
+        return {
+          id: s.pet.id,
+          name: s.pet.name,
+          color: s.color,
+          weight: lastPt.weight,
+          x: lastPt.x + 8,
+          y: lastPt.y
+        };
+      })
+      .sort((a, b) => a.y - b.y);
+
+    // Stacking adjustment (top-down)
+    const minSpacing = 12;
+    for (let i = 1; i < labelsRaw.length; i++) {
+      const prev = labelsRaw[i - 1];
+      const curr = labelsRaw[i];
+      if (curr.y - prev.y < minSpacing) {
+        curr.y = prev.y + minSpacing;
+      }
+    }
+    
+    // Boundary check adjustment (bottom-up)
+    const maxY = chartHeight - paddingBottom + 5;
+    for (let i = labelsRaw.length - 1; i >= 0; i--) {
+      if (labelsRaw[i].y > maxY) {
+        labelsRaw[i].y = maxY;
+        if (i > 0 && labelsRaw[i].y - labelsRaw[i - 1].y < minSpacing) {
+          labelsRaw[i - 1].y = labelsRaw[i].y - minSpacing;
+        }
+      }
+    }
+
+    endLabels.push(...labelsRaw);
   }
 
   return (
@@ -213,7 +257,7 @@ export default function WeightChart() {
           />
 
           {/* Area fill is rendered only if there is a single active series to avoid visual clutter */}
-          {seriesWithPoints.length === 1 && seriesWithPoints[0].areaD && (
+          {!isMulti && seriesWithPoints.length === 1 && seriesWithPoints[0].areaD && (
             <path d={seriesWithPoints[0].areaD} fill="url(#chartGrad)" />
           )}
 
@@ -263,34 +307,71 @@ export default function WeightChart() {
                     fill={s.color}
                   />
                   
-                  {/* White text halo/outline for high-contrast legibility */}
-                  <text
-                    x={p.x}
-                    y={p.y - 12}
-                    textAnchor="middle"
-                    fontSize="9.5"
-                    fontWeight="800"
-                    fill="var(--bg-card)"
-                    stroke="var(--bg-card)"
-                    strokeWidth="3.5"
-                    strokeLinejoin="round"
-                    style={{ userSelect: 'none' }}
-                  >
-                    {p.weight}
-                  </text>
-                  {/* Foreground weight text */}
-                  <text
-                    x={p.x}
-                    y={p.y - 12}
-                    textAnchor="middle"
-                    fontSize="9.5"
-                    fontWeight="800"
-                    fill={s.color}
-                  >
-                    {p.weight}
-                  </text>
+                  {/* Weight label: Render ONLY in single pet view to prevent multi-line overlaps and visual clutter */}
+                  {!isMulti && (
+                    <>
+                      {/* White text halo/outline for high-contrast legibility */}
+                      <text
+                        x={p.x}
+                        y={p.y - 12}
+                        textAnchor="middle"
+                        fontSize="9.5"
+                        fontWeight="800"
+                        fill="var(--bg-card)"
+                        stroke="var(--bg-card)"
+                        strokeWidth="3.5"
+                        strokeLinejoin="round"
+                        style={{ userSelect: 'none' }}
+                      >
+                        {p.weight}
+                      </text>
+                      {/* Foreground weight text */}
+                      <text
+                        x={p.x}
+                        y={p.y - 12}
+                        textAnchor="middle"
+                        fontSize="9.5"
+                        fontWeight="800"
+                        fill={s.color}
+                      >
+                        {p.weight}
+                      </text>
+                    </>
+                  )}
                 </g>
               ))}
+            </g>
+          ))}
+
+          {/* Direct Line Labels for Multi-Pet view */}
+          {isMulti && endLabels.map((lbl) => (
+            <g key={lbl.id}>
+              {/* Halo */}
+              <text
+                x={lbl.x}
+                y={lbl.y + 3}
+                textAnchor="start"
+                fontSize="9"
+                fontWeight="800"
+                fill="var(--bg-card)"
+                stroke="var(--bg-card)"
+                strokeWidth="3.5"
+                strokeLinejoin="round"
+                style={{ userSelect: 'none' }}
+              >
+                {`${lbl.name} (${lbl.weight}kg)`}
+              </text>
+              {/* Foreground */}
+              <text
+                x={lbl.x}
+                y={lbl.y + 3}
+                textAnchor="start"
+                fontSize="9"
+                fontWeight="800"
+                fill={lbl.color}
+              >
+                {`${lbl.name} (${lbl.weight}kg)`}
+              </text>
             </g>
           ))}
         </svg>
