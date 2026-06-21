@@ -17,8 +17,13 @@ import {
 import {
   getDBValue,
   setDBValue,
+  removeDBValue,
   migrateFromLocalStorage
 } from '../utils/db';
+import {
+  readDesktopDataFile,
+  writeDesktopDataFile
+} from '../utils/desktopStorage';
 
 const AppContext = createContext();
 
@@ -30,6 +35,7 @@ export function AppProvider({ children }) {
   const [theme, setTheme] = useState('light');
   const [currency, setCurrency] = useState('THB');
   const [loading, setLoading] = useState(true);
+  const [storagePath, setStoragePath] = useState(null);
 
   const currencySymbol = CURRENCIES[currency] || '$';
 
@@ -57,7 +63,7 @@ export function AppProvider({ children }) {
 
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null);
-  const [reminderForm, setReminderForm] = useState({ petId: '', type: 'Vaccine', title: '', date: '', time: '09:00', recurrence: 'none', earlyReminder: '0' });
+  const [reminderForm, setReminderForm] = useState({ petId: '', type: 'Vaccine', title: '', date: '', time: '09:00', recurrence: 'none', earlyReminder: '0', addToCalendar: false });
 
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [editingWeight, setEditingWeight] = useState(null);
@@ -103,37 +109,59 @@ export function AppProvider({ children }) {
       try {
         await migrateFromLocalStorage();
 
-        const savedPets = await getDBValue('pawfecto_pets');
-        const savedExpenses = await getDBValue('pawfecto_expenses');
-        const savedReminders = await getDBValue('pawfecto_reminders');
-        const savedTheme = await getDBValue('pawfecto_theme');
-        const savedCurrency = await getDBValue('pawfecto_currency');
+        const savedStoragePath = await getDBValue('pawfecto_storage_path');
+        let customData = null;
 
-        if (savedPets !== undefined && savedPets !== null) {
-          setPets(savedPets);
-          if (savedPets.length > 0) {
-            const randomIndex = Math.floor(Math.random() * savedPets.length);
-            setSelectedPetId(savedPets[randomIndex].id);
+        if (savedStoragePath) {
+          setStoragePath(savedStoragePath);
+          customData = await readDesktopDataFile(savedStoragePath);
+        }
+
+        let activePets = null;
+        let activeExpenses = null;
+        let activeReminders = null;
+        let activeTheme = null;
+        let activeCurrency = null;
+
+        if (customData) {
+          activePets = customData.pets;
+          activeExpenses = customData.expenses;
+          activeReminders = customData.reminders;
+          activeTheme = customData.theme;
+          activeCurrency = customData.currency;
+        } else {
+          activePets = await getDBValue('pawfecto_pets');
+          activeExpenses = await getDBValue('pawfecto_expenses');
+          activeReminders = await getDBValue('pawfecto_reminders');
+          activeTheme = await getDBValue('pawfecto_theme');
+          activeCurrency = await getDBValue('pawfecto_currency');
+        }
+
+        if (activePets !== undefined && activePets !== null) {
+          setPets(activePets);
+          if (activePets.length > 0) {
+            const randomIndex = Math.floor(Math.random() * activePets.length);
+            setSelectedPetId(activePets[randomIndex].id);
           }
         } else if (INITIAL_PETS.length > 0) {
           setPets(INITIAL_PETS);
           setSelectedPetId(INITIAL_PETS[0].id);
         }
-        if (savedExpenses !== undefined && savedExpenses !== null) {
-          setExpenses(savedExpenses);
+        if (activeExpenses !== undefined && activeExpenses !== null) {
+          setExpenses(activeExpenses);
         } else if (INITIAL_EXPENSES.length > 0) {
           setExpenses(INITIAL_EXPENSES);
         }
-        if (savedReminders !== undefined && savedReminders !== null) {
-          setReminders(savedReminders);
+        if (activeReminders !== undefined && activeReminders !== null) {
+          setReminders(activeReminders);
         } else if (INITIAL_REMINDERS.length > 0) {
           setReminders(INITIAL_REMINDERS);
         }
-        if (savedTheme) {
-          setTheme(savedTheme);
-          document.documentElement.setAttribute('data-theme', savedTheme);
+        if (activeTheme) {
+          setTheme(activeTheme);
+          document.documentElement.setAttribute('data-theme', activeTheme);
         }
-        if (savedCurrency) setCurrency(savedCurrency);
+        if (activeCurrency) setCurrency(activeCurrency);
       } catch (err) {
         console.error('Failed to initialize database or migrate data:', err);
       } finally {
@@ -254,6 +282,42 @@ export function AppProvider({ children }) {
     }
   };
 
+  // --- DESKTOP (TAURI/WEB) HTML5 NOTIFICATIONS FALLBACK ---
+  useEffect(() => {
+    if (Capacitor.isNativePlatform() || loading || !('Notification' in window)) return;
+
+    if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+
+    // Check every minute for due notifications
+    const intervalId = setInterval(() => {
+      const now = new Date();
+      reminders.forEach(rem => {
+        if (rem.completed) return;
+        
+        const remTime = rem.time || '09:00';
+        const [year, month, day] = rem.date.split('-').map(Number);
+        const [hours, minutes] = remTime.split(':').map(Number);
+        const scheduleDate = new Date(year, month - 1, day, hours, minutes, 0);
+        
+        // If within the last 60 seconds of the scheduled time
+        const diff = now.getTime() - scheduleDate.getTime();
+        if (diff >= 0 && diff < 60000) {
+          const pet = pets.find(p => p.id === rem.petId);
+          const petName = pet ? pet.name : 'your pet';
+          const { title, body } = getWarmReminderMessage(rem, petName, false);
+          
+          if (Notification.permission === 'granted') {
+            new Notification(title, { body });
+          }
+        }
+      });
+    }, 60000);
+
+    return () => clearInterval(intervalId);
+  }, [reminders, pets, loading]);
+
   useEffect(() => {
     if (!loading) {
       setDBValue('pawfecto_pets', pets);
@@ -306,6 +370,37 @@ export function AppProvider({ children }) {
       setDBValue('pawfecto_currency', currency);
     }
   }, [currency, loading]);
+
+  // --- DESKTOP FILESYSTEM SYNC EFFECT ---
+  useEffect(() => {
+    if (!loading && storagePath) {
+      writeDesktopDataFile(storagePath, { pets, expenses, reminders, theme, currency });
+    }
+  }, [pets, expenses, reminders, theme, currency, loading, storagePath]);
+
+  const changeStoragePath = async (newPath) => {
+    try {
+      await setDBValue('pawfecto_storage_path', newPath);
+      setStoragePath(newPath);
+      // Copy current states to new directory
+      await writeDesktopDataFile(newPath, { pets, expenses, reminders, theme, currency });
+      showFeedback('Storage directory updated successfully!');
+    } catch (err) {
+      console.error('Failed to change storage path:', err);
+      showFeedback('Failed to update storage directory.', 'danger');
+    }
+  };
+
+  const clearStoragePath = async () => {
+    try {
+      await removeDBValue('pawfecto_storage_path');
+      setStoragePath(null);
+      showFeedback('Returned storage to default local database.');
+    } catch (err) {
+      console.error('Failed to clear storage path:', err);
+      showFeedback('Failed to reset storage directory.', 'danger');
+    }
+  };
 
   // --- AUDIO ALARMS & DESKTOP ALERTS ---
   const triggerAlert = (reminder) => {
@@ -389,39 +484,64 @@ export function AppProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    const checkInterval = setInterval(() => {
-      const now = new Date();
-      const localDate = now.getFullYear() + '-' + 
-        String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-        String(now.getDate()).padStart(2, '0');
-      const localTime = String(now.getHours()).padStart(2, '0') + ':' + 
-        String(now.getMinutes()).padStart(2, '0');
+    const workerCode = `
+      let timer = null;
+      self.onmessage = function(e) {
+        if (e.data === 'start') {
+          if (timer) clearInterval(timer);
+          timer = setInterval(() => {
+            self.postMessage('tick');
+          }, 4000);
+        } else if (e.data === 'stop') {
+          if (timer) clearInterval(timer);
+        }
+      };
+    `;
+    const blob = new Blob([workerCode], { type: 'application/javascript' });
+    const workerUrl = URL.createObjectURL(blob);
+    const worker = new Worker(workerUrl);
 
-      let updated = false;
-      const nextReminders = reminders.map(rem => {
-        if (!rem.completed && !rem.notified) {
-          if (rem.date < localDate) {
-            triggerAlert(rem);
-            updated = true;
-            return { ...rem, notified: true };
-          } else if (rem.date === localDate) {
-            const remTime = rem.time || '09:00';
-            if (remTime <= localTime) {
+    worker.onmessage = (e) => {
+      if (e.data === 'tick') {
+        const now = new Date();
+        const localDate = now.getFullYear() + '-' + 
+          String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+          String(now.getDate()).padStart(2, '0');
+        const localTime = String(now.getHours()).padStart(2, '0') + ':' + 
+          String(now.getMinutes()).padStart(2, '0');
+
+        let updated = false;
+        const nextReminders = reminders.map(rem => {
+          if (!rem.completed && !rem.notified) {
+            if (rem.date < localDate) {
               triggerAlert(rem);
               updated = true;
               return { ...rem, notified: true };
+            } else if (rem.date === localDate) {
+              const remTime = rem.time || '09:00';
+              if (remTime <= localTime) {
+                triggerAlert(rem);
+                updated = true;
+                return { ...rem, notified: true };
+              }
             }
           }
+          return rem;
+        });
+
+        if (updated) {
+          setReminders(nextReminders);
         }
-        return rem;
-      });
-
-      if (updated) {
-        setReminders(nextReminders);
       }
-    }, 4000);
+    };
 
-    return () => clearInterval(checkInterval);
+    worker.postMessage('start');
+
+    return () => {
+      worker.postMessage('stop');
+      worker.terminate();
+      URL.revokeObjectURL(workerUrl);
+    };
   }, [reminders, pets]);
 
   // --- CRUD ACTIONS ---
@@ -566,9 +686,78 @@ export function AppProvider({ children }) {
       date: new Date().toISOString().split('T')[0],
       time: '09:00',
       recurrence: 'none',
-      earlyReminder: '0'
+      earlyReminder: '0',
+      addToCalendar: false
     });
     setShowReminderModal(true);
+  };
+
+  const openEditReminder = (reminder) => {
+    setEditingReminder(reminder);
+    setReminderForm({
+      petId: reminder.petId,
+      type: reminder.type,
+      title: reminder.title,
+      date: reminder.date,
+      time: reminder.time || '09:00',
+      recurrence: reminder.recurrence || 'none',
+      earlyReminder: reminder.earlyReminder || '0',
+      addToCalendar: false
+    });
+    setShowReminderModal(true);
+  };
+
+  const addToSystemCalendar = (reminder, petName) => {
+    const gcalTitle = encodeURIComponent(`🐾 Pawfecto: ${reminder.title} (${petName})`);
+    const dateStr = reminder.date.replace(/-/g, '');
+    const timeStr = (reminder.time || '09:00').replace(/:/g, '');
+    const startDateTime = `${dateStr}T${timeStr}00`;
+    
+    const [hours, minutes] = (reminder.time || '09:00').split(':').map(Number);
+    const endMin = (minutes + 30) % 60;
+    const endHrs = hours + Math.floor((minutes + 30) / 60);
+    const endDateStr = dateStr;
+    const endTimeStr = String(endHrs).padStart(2, '0') + String(endMin).padStart(2, '0') + '00';
+    const endDateTime = `${endDateStr}T${endTimeStr}`;
+    
+    const gcalDetails = encodeURIComponent(`Reminder for your pet, ${petName}.\nType: ${reminder.type}\nRecurrence: ${reminder.recurrence}\nScheduled via Pawfecto.`);
+    const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gcalTitle}&dates=${startDateTime}/${endDateTime}&details=${gcalDetails}`;
+
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Pawfecto//Pet Management App//EN',
+      'BEGIN:VEVENT',
+      `UID:${reminder.id}@pawfecto.app`,
+      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
+      `DTSTART:${dateStr}T${timeStr}00`,
+      `DTEND:${endDateStr}T${endTimeStr}`,
+      `SUMMARY:Pawfecto: ${reminder.title} (${petName})`,
+      `DESCRIPTION:Reminder for ${petName} (${reminder.type}). Recurrence: ${reminder.recurrence}`,
+      'STATUS:CONFIRMED',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
+
+    try {
+      window.open(gcalUrl, '_blank');
+    } catch (e) {
+      console.error('Failed to open Google Calendar tab:', e);
+    }
+
+    try {
+      const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `pawfecto_reminder_${reminder.id}.ics`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to download calendar file:', e);
+    }
   };
 
   const saveReminder = (e) => {
@@ -597,6 +786,13 @@ export function AppProvider({ children }) {
       setReminders([...reminders, reminderData]);
       showFeedback('Reminder scheduled!');
     }
+
+    if (reminderForm.addToCalendar) {
+      const pet = pets.find(p => p.id === reminderData.petId);
+      const petName = pet ? pet.name : 'your pet';
+      addToSystemCalendar(reminderData, petName);
+    }
+
     setShowReminderModal(false);
   };
 
@@ -1073,6 +1269,7 @@ export function AppProvider({ children }) {
       currency, setCurrency,
       currencySymbol,
       loading,
+      storagePath, changeStoragePath, clearStoragePath,
 
       // Filter states
       activeTab, setActiveTab,
@@ -1111,7 +1308,7 @@ export function AppProvider({ children }) {
       // Methods / Handlers
       openAddPet, openEditPet, savePet, deletePet,
       openAddExpense, openEditExpense, saveExpense, adjustExpense, deleteExpense,
-      openAddReminder, saveReminder, toggleReminderCompleted, deleteReminder,
+      openAddReminder, openEditReminder, saveReminder, toggleReminderCompleted, deleteReminder, addToSystemCalendar,
       openAddWeight, openEditWeight, saveWeight, adjustWeight, deleteWeightLog,
       openAddVaccine, openEditVaccine, saveVaccine, deleteVaccine,
       exportBackup, importBackup, resetToFactory,

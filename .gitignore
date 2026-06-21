@@ -41,3 +41,6 @@ implementation_plan.md
 walkthrough.md
 .agents/
 
+# Electron build directory
+dist-electron/
+

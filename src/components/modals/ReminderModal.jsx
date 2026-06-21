@@ -9,7 +9,8 @@ export default function ReminderModal() {
     pets, 
     reminderForm, 
     setReminderForm, 
-    saveReminder 
+    saveReminder,
+    editingReminder
   } = useApp();
 
   if (!showReminderModal) return null;
@@ -18,7 +19,7 @@ export default function ReminderModal() {
     <div className="modal-overlay">
       <div className="modal-content">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2>Schedule Reminder</h2>
+          <h2>{editingReminder ? 'Edit Reminder' : 'Schedule Reminder'}</h2>
           <button onClick={() => setShowReminderModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
             <X size={24} />
           </button>
@@ -121,9 +122,22 @@ export default function ReminderModal() {
             </select>
           </div>
 
+          <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '1.25rem 0 0.5rem 0' }}>
+            <input 
+              type="checkbox" 
+              id="addToCalendar"
+              checked={reminderForm.addToCalendar || false}
+              onChange={(e) => setReminderForm({ ...reminderForm, addToCalendar: e.target.checked })}
+              style={{ cursor: 'pointer', width: '17px', height: '17px', accentColor: 'var(--primary)' }}
+            />
+            <label htmlFor="addToCalendar" style={{ cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-main)', userSelect: 'none', fontWeight: '700', margin: 0 }}>
+              Export / Add to Calendar (Google / iCal)
+            </label>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
             <button type="button" className="btn btn-secondary" onClick={() => setShowReminderModal(false)}>Cancel</button>
-            <button type="submit" className="btn btn-primary">Schedule Task</button>
+            <button type="submit" className="btn btn-primary">{editingReminder ? 'Save Changes' : 'Schedule Task'}</button>
           </div>
         </form>
       </div>
