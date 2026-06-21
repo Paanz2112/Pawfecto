@@ -1,5 +1,34 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
+
+// IPC Handlers
+ipcMain.handle('select-directory', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory']
+  });
+  if (result.canceled) return null;
+  return result.filePaths[0];
+});
+
+ipcMain.handle('read-file', async (event, filePath) => {
+  try {
+    return fs.readFileSync(filePath, 'utf8');
+  } catch (err) {
+    console.error('Failed to read file:', err);
+    return null;
+  }
+});
+
+ipcMain.handle('write-file', async (event, filePath, data) => {
+  try {
+    fs.writeFileSync(filePath, data, 'utf8');
+    return true;
+  } catch (err) {
+    console.error('Failed to write file:', err);
+    return false;
+  }
+});
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -8,6 +37,7 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
     },

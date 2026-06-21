@@ -1,8 +1,9 @@
 import React from 'react';
-import { Download, Upload, Moon, Sun, Coins, Trash2, ChevronRight, ShieldAlert } from 'lucide-react';
+import { Download, Upload, Moon, Sun, Coins, Trash2, ChevronRight, FolderOpen } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { isDesktop, selectStorageDirectory } from '../../utils/desktopStorage';
 
 export default function SettingsTab() {
   const { 
@@ -12,8 +13,25 @@ export default function SettingsTab() {
     setTheme, 
     currency, 
     setCurrency, 
-    resetToFactory
+    resetToFactory,
+    storagePath,
+    changeStoragePath,
+    clearStoragePath
   } = useApp();
+
+  const handleChangeStoragePath = async () => {
+    triggerHaptic();
+    const path = await selectStorageDirectory();
+    if (path) {
+      changeStoragePath(path);
+    }
+  };
+
+  const handleClearStoragePath = (e) => {
+    e.stopPropagation();
+    triggerHaptic();
+    clearStoragePath();
+  };
 
   const isNative = Capacitor.isNativePlatform();
 
@@ -184,6 +202,27 @@ export default function SettingsTab() {
                 />
               </label>
             </div>
+
+            {isDesktop() && (
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div>
+                  <p style={{ fontWeight: '600' }}>Custom Storage Folder</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                    Store all database records in a custom directory (e.g., OneDrive, Dropbox) for easy sync.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="btn btn-secondary" onClick={handleChangeStoragePath} style={{ flexGrow: 1, justifyContent: 'flex-start', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 'calc(100% - 75px)' }}>
+                    <FolderOpen size={18} /> {storagePath ? storagePath : 'Default Database Storage'}
+                  </button>
+                  {storagePath && (
+                    <button className="btn btn-secondary" onClick={handleClearStoragePath} style={{ color: 'var(--text-danger)' }}>
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

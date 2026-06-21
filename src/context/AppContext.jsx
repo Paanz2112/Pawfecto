@@ -17,8 +17,13 @@ import {
 import {
   getDBValue,
   setDBValue,
+  removeDBValue,
   migrateFromLocalStorage
 } from '../utils/db';
+import {
+  readDesktopDataFile,
+  writeDesktopDataFile
+} from '../utils/desktopStorage';
 
 const AppContext = createContext();
 
@@ -30,6 +35,7 @@ export function AppProvider({ children }) {
   const [theme, setTheme] = useState('light');
   const [currency, setCurrency] = useState('THB');
   const [loading, setLoading] = useState(true);
+  const [storagePath, setStoragePath] = useState(null);
 
   const currencySymbol = CURRENCIES[currency] || '$';
 
@@ -103,37 +109,59 @@ export function AppProvider({ children }) {
       try {
         await migrateFromLocalStorage();
 
-        const savedPets = await getDBValue('pawfecto_pets');
-        const savedExpenses = await getDBValue('pawfecto_expenses');
-        const savedReminders = await getDBValue('pawfecto_reminders');
-        const savedTheme = await getDBValue('pawfecto_theme');
-        const savedCurrency = await getDBValue('pawfecto_currency');
+        const savedStoragePath = await getDBValue('pawfecto_storage_path');
+        let customData = null;
 
-        if (savedPets !== undefined && savedPets !== null) {
-          setPets(savedPets);
-          if (savedPets.length > 0) {
-            const randomIndex = Math.floor(Math.random() * savedPets.length);
-            setSelectedPetId(savedPets[randomIndex].id);
+        if (savedStoragePath) {
+          setStoragePath(savedStoragePath);
+          customData = await readDesktopDataFile(savedStoragePath);
+        }
+
+        let activePets = null;
+        let activeExpenses = null;
+        let activeReminders = null;
+        let activeTheme = null;
+        let activeCurrency = null;
+
+        if (customData) {
+          activePets = customData.pets;
+          activeExpenses = customData.expenses;
+          activeReminders = customData.reminders;
+          activeTheme = customData.theme;
+          activeCurrency = customData.currency;
+        } else {
+          activePets = await getDBValue('pawfecto_pets');
+          activeExpenses = await getDBValue('pawfecto_expenses');
+          activeReminders = await getDBValue('pawfecto_reminders');
+          activeTheme = await getDBValue('pawfecto_theme');
+          activeCurrency = await getDBValue('pawfecto_currency');
+        }
+
+        if (activePets !== undefined && activePets !== null) {
+          setPets(activePets);
+          if (activePets.length > 0) {
+            const randomIndex = Math.floor(Math.random() * activePets.length);
+            setSelectedPetId(activePets[randomIndex].id);
           }
         } else if (INITIAL_PETS.length > 0) {
           setPets(INITIAL_PETS);
           setSelectedPetId(INITIAL_PETS[0].id);
         }
-        if (savedExpenses !== undefined && savedExpenses !== null) {
-          setExpenses(savedExpenses);
+        if (activeExpenses !== undefined && activeExpenses !== null) {
+          setExpenses(activeExpenses);
         } else if (INITIAL_EXPENSES.length > 0) {
           setExpenses(INITIAL_EXPENSES);
         }
-        if (savedReminders !== undefined && savedReminders !== null) {
-          setReminders(savedReminders);
+        if (activeReminders !== undefined && activeReminders !== null) {
+          setReminders(activeReminders);
         } else if (INITIAL_REMINDERS.length > 0) {
           setReminders(INITIAL_REMINDERS);
         }
-        if (savedTheme) {
-          setTheme(savedTheme);
-          document.documentElement.setAttribute('data-theme', savedTheme);
+        if (activeTheme) {
+          setTheme(activeTheme);
+          document.documentElement.setAttribute('data-theme', activeTheme);
         }
-        if (savedCurrency) setCurrency(savedCurrency);
+        if (activeCurrency) setCurrency(activeCurrency);
       } catch (err) {
         console.error('Failed to initialize database or migrate data:', err);
       } finally {
@@ -342,6 +370,37 @@ export function AppProvider({ children }) {
       setDBValue('pawfecto_currency', currency);
     }
   }, [currency, loading]);
+
+  // --- DESKTOP FILESYSTEM SYNC EFFECT ---
+  useEffect(() => {
+    if (!loading && storagePath) {
+      writeDesktopDataFile(storagePath, { pets, expenses, reminders, theme, currency });
+    }
+  }, [pets, expenses, reminders, theme, currency, loading, storagePath]);
+
+  const changeStoragePath = async (newPath) => {
+    try {
+      await setDBValue('pawfecto_storage_path', newPath);
+      setStoragePath(newPath);
+      // Copy current states to new directory
+      await writeDesktopDataFile(newPath, { pets, expenses, reminders, theme, currency });
+      showFeedback('Storage directory updated successfully!');
+    } catch (err) {
+      console.error('Failed to change storage path:', err);
+      showFeedback('Failed to update storage directory.', 'danger');
+    }
+  };
+
+  const clearStoragePath = async () => {
+    try {
+      await removeDBValue('pawfecto_storage_path');
+      setStoragePath(null);
+      showFeedback('Returned storage to default local database.');
+    } catch (err) {
+      console.error('Failed to clear storage path:', err);
+      showFeedback('Failed to reset storage directory.', 'danger');
+    }
+  };
 
   // --- AUDIO ALARMS & DESKTOP ALERTS ---
   const triggerAlert = (reminder) => {
@@ -1109,6 +1168,7 @@ export function AppProvider({ children }) {
       currency, setCurrency,
       currencySymbol,
       loading,
+      storagePath, changeStoragePath, clearStoragePath,
 
       // Filter states
       activeTab, setActiveTab,
