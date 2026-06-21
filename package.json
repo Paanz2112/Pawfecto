@@ -3,10 +3,34 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "dev:desktop": "tauri dev",
+    "build:desktop": "tauri build",
+    "dev:electron": "concurrently \"npm run dev\" \"electron .\"",
+    "build:electron": "vite build && electron-builder"
+  },
+  "build": {
+    "appId": "com.pawfecto.app",
+    "productName": "Pawfecto",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    }
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
@@ -16,15 +40,20 @@
     "@capacitor/ios": "^8.4.0",
     "@capacitor/keyboard": "^8.0.3",
     "@capacitor/local-notifications": "^8.2.0",
+    "@tauri-apps/api": "^1.6.0",
     "lucide-react": "^0.395.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^3.8.1"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^1.6.3",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^10.0.3",
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3",
     "vite": "^5.3.1"
   }
 }

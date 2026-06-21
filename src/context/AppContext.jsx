@@ -254,6 +254,42 @@ export function AppProvider({ children }) {
     }
   };
 
+  // --- DESKTOP (TAURI/WEB) HTML5 NOTIFICATIONS FALLBACK ---
+  useEffect(() => {
+    if (Capacitor.isNativePlatform() || loading || !('Notification' in window)) return;
+
+    if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+
+    // Check every minute for due notifications
+    const intervalId = setInterval(() => {
+      const now = new Date();
+      reminders.forEach(rem => {
+        if (rem.completed) return;
+        
+        const remTime = rem.time || '09:00';
+        const [year, month, day] = rem.date.split('-').map(Number);
+        const [hours, minutes] = remTime.split(':').map(Number);
+        const scheduleDate = new Date(year, month - 1, day, hours, minutes, 0);
+        
+        // If within the last 60 seconds of the scheduled time
+        const diff = now.getTime() - scheduleDate.getTime();
+        if (diff >= 0 && diff < 60000) {
+          const pet = pets.find(p => p.id === rem.petId);
+          const petName = pet ? pet.name : 'your pet';
+          const { title, body } = getWarmReminderMessage(rem, petName, false);
+          
+          if (Notification.permission === 'granted') {
+            new Notification(title, { body });
+          }
+        }
+      });
+    }, 60000);
+
+    return () => clearInterval(intervalId);
+  }, [reminders, pets, loading]);
+
   useEffect(() => {
     if (!loading) {
       setDBValue('pawfecto_pets', pets);
