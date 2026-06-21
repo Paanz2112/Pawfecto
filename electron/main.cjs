@@ -45,6 +45,8 @@ function createWindow() {
     title: 'Pawfecto'
   });
 
+  win.maximize();
+
   // Load Vite dev server URL in development, otherwise load compiled dist/index.html
   if (!app.isPackaged) {
     win.loadURL('http://localhost:5173');
