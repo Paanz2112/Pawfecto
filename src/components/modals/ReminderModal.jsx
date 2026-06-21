@@ -121,6 +121,19 @@ export default function ReminderModal() {
             </select>
           </div>
 
+          <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '1.25rem 0 0.5rem 0' }}>
+            <input 
+              type="checkbox" 
+              id="addToCalendar"
+              checked={reminderForm.addToCalendar || false}
+              onChange={(e) => setReminderForm({ ...reminderForm, addToCalendar: e.target.checked })}
+              style={{ cursor: 'pointer', width: '17px', height: '17px', accentColor: 'var(--primary)' }}
+            />
+            <label htmlFor="addToCalendar" style={{ cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-main)', userSelect: 'none', fontWeight: '700', margin: 0 }}>
+              Export / Add to Calendar (Google / iCal)
+            </label>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
             <button type="button" className="btn btn-secondary" onClick={() => setShowReminderModal(false)}>Cancel</button>
             <button type="submit" className="btn btn-primary">Schedule Task</button>
