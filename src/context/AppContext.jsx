@@ -692,6 +692,21 @@ export function AppProvider({ children }) {
     setShowReminderModal(true);
   };
 
+  const openEditReminder = (reminder) => {
+    setEditingReminder(reminder);
+    setReminderForm({
+      petId: reminder.petId,
+      type: reminder.type,
+      title: reminder.title,
+      date: reminder.date,
+      time: reminder.time || '09:00',
+      recurrence: reminder.recurrence || 'none',
+      earlyReminder: reminder.earlyReminder || '0',
+      addToCalendar: false
+    });
+    setShowReminderModal(true);
+  };
+
   const addToSystemCalendar = (reminder, petName) => {
     const gcalTitle = encodeURIComponent(`🐾 Pawfecto: ${reminder.title} (${petName})`);
     const dateStr = reminder.date.replace(/-/g, '');
@@ -1293,7 +1308,7 @@ export function AppProvider({ children }) {
       // Methods / Handlers
       openAddPet, openEditPet, savePet, deletePet,
       openAddExpense, openEditExpense, saveExpense, adjustExpense, deleteExpense,
-      openAddReminder, saveReminder, toggleReminderCompleted, deleteReminder, addToSystemCalendar,
+      openAddReminder, openEditReminder, saveReminder, toggleReminderCompleted, deleteReminder, addToSystemCalendar,
       openAddWeight, openEditWeight, saveWeight, adjustWeight, deleteWeightLog,
       openAddVaccine, openEditVaccine, saveVaccine, deleteVaccine,
       exportBackup, importBackup, resetToFactory,

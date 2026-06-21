@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, X, Plus, BellRing, Calendar } from 'lucide-react';
+import { CheckCircle2, X, Plus, BellRing, Calendar, Edit2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -9,6 +9,7 @@ export default function RemindersTab() {
     filteredReminders, 
     pets, 
     openAddReminder, 
+    openEditReminder,
     toggleReminderCompleted, 
     deleteReminder,
     addToSystemCalendar
@@ -99,6 +100,17 @@ export default function RemindersTab() {
                           }}
                         >
                           <Calendar size={14} style={{ color: 'var(--text-main)' }} />
+                        </button>
+                        <button 
+                          className="btn-icon" 
+                          style={{ width: '32px', height: '32px' }} 
+                          title="Edit Reminder"
+                          onClick={async () => {
+                            await triggerHaptic();
+                            openEditReminder(rem);
+                          }}
+                        >
+                          <Edit2 size={14} style={{ color: 'var(--text-main)' }} />
                         </button>
                         <button className="btn-icon" style={{ width: '32px', height: '32px' }} onClick={() => handleDelete(rem.id)}>
                           <X size={14} style={{ color: 'var(--danger)' }} />
