@@ -23,6 +23,9 @@
       },
       "path": {
         "all": true
+      },
+      "notification": {
+        "all": true
       }
     },
     "bundle": {
@@ -40,7 +43,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "com.pawfecto.app",
       "longDescription": "",
       "macOS": {
         "entitlements": null,

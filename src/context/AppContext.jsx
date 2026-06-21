@@ -63,7 +63,7 @@ export function AppProvider({ children }) {
 
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null);
-  const [reminderForm, setReminderForm] = useState({ petId: '', type: 'Vaccine', title: '', date: '', time: '09:00', recurrence: 'none', earlyReminder: '0' });
+  const [reminderForm, setReminderForm] = useState({ petId: '', type: 'Vaccine', title: '', date: '', time: '09:00', recurrence: 'none', earlyReminder: '0', addToCalendar: false });
 
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [editingWeight, setEditingWeight] = useState(null);
@@ -484,39 +484,64 @@ export function AppProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    const checkInterval = setInterval(() => {
-      const now = new Date();
-      const localDate = now.getFullYear() + '-' + 
-        String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-        String(now.getDate()).padStart(2, '0');
-      const localTime = String(now.getHours()).padStart(2, '0') + ':' + 
-        String(now.getMinutes()).padStart(2, '0');
+    const workerCode = `
+      let timer = null;
+      self.onmessage = function(e) {
+        if (e.data === 'start') {
+          if (timer) clearInterval(timer);
+          timer = setInterval(() => {
+            self.postMessage('tick');
+          }, 4000);
+        } else if (e.data === 'stop') {
+          if (timer) clearInterval(timer);
+        }
+      };
+    `;
+    const blob = new Blob([workerCode], { type: 'application/javascript' });
+    const workerUrl = URL.createObjectURL(blob);
+    const worker = new Worker(workerUrl);
 
-      let updated = false;
-      const nextReminders = reminders.map(rem => {
-        if (!rem.completed && !rem.notified) {
-          if (rem.date < localDate) {
-            triggerAlert(rem);
-            updated = true;
-            return { ...rem, notified: true };
-          } else if (rem.date === localDate) {
-            const remTime = rem.time || '09:00';
-            if (remTime <= localTime) {
+    worker.onmessage = (e) => {
+      if (e.data === 'tick') {
+        const now = new Date();
+        const localDate = now.getFullYear() + '-' + 
+          String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+          String(now.getDate()).padStart(2, '0');
+        const localTime = String(now.getHours()).padStart(2, '0') + ':' + 
+          String(now.getMinutes()).padStart(2, '0');
+
+        let updated = false;
+        const nextReminders = reminders.map(rem => {
+          if (!rem.completed && !rem.notified) {
+            if (rem.date < localDate) {
               triggerAlert(rem);
               updated = true;
               return { ...rem, notified: true };
+            } else if (rem.date === localDate) {
+              const remTime = rem.time || '09:00';
+              if (remTime <= localTime) {
+                triggerAlert(rem);
+                updated = true;
+                return { ...rem, notified: true };
+              }
             }
           }
+          return rem;
+        });
+
+        if (updated) {
+          setReminders(nextReminders);
         }
-        return rem;
-      });
-
-      if (updated) {
-        setReminders(nextReminders);
       }
-    }, 4000);
+    };
 
-    return () => clearInterval(checkInterval);
+    worker.postMessage('start');
+
+    return () => {
+      worker.postMessage('stop');
+      worker.terminate();
+      URL.revokeObjectURL(workerUrl);
+    };
   }, [reminders, pets]);
 
   // --- CRUD ACTIONS ---
@@ -661,9 +686,63 @@ export function AppProvider({ children }) {
       date: new Date().toISOString().split('T')[0],
       time: '09:00',
       recurrence: 'none',
-      earlyReminder: '0'
+      earlyReminder: '0',
+      addToCalendar: false
     });
     setShowReminderModal(true);
+  };
+
+  const addToSystemCalendar = (reminder, petName) => {
+    const gcalTitle = encodeURIComponent(`🐾 Pawfecto: ${reminder.title} (${petName})`);
+    const dateStr = reminder.date.replace(/-/g, '');
+    const timeStr = (reminder.time || '09:00').replace(/:/g, '');
+    const startDateTime = `${dateStr}T${timeStr}00`;
+    
+    const [hours, minutes] = (reminder.time || '09:00').split(':').map(Number);
+    const endMin = (minutes + 30) % 60;
+    const endHrs = hours + Math.floor((minutes + 30) / 60);
+    const endDateStr = dateStr;
+    const endTimeStr = String(endHrs).padStart(2, '0') + String(endMin).padStart(2, '0') + '00';
+    const endDateTime = `${endDateStr}T${endTimeStr}`;
+    
+    const gcalDetails = encodeURIComponent(`Reminder for your pet, ${petName}.\nType: ${reminder.type}\nRecurrence: ${reminder.recurrence}\nScheduled via Pawfecto.`);
+    const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gcalTitle}&dates=${startDateTime}/${endDateTime}&details=${gcalDetails}`;
+
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Pawfecto//Pet Management App//EN',
+      'BEGIN:VEVENT',
+      `UID:${reminder.id}@pawfecto.app`,
+      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
+      `DTSTART:${dateStr}T${timeStr}00`,
+      `DTEND:${endDateStr}T${endTimeStr}`,
+      `SUMMARY:Pawfecto: ${reminder.title} (${petName})`,
+      `DESCRIPTION:Reminder for ${petName} (${reminder.type}). Recurrence: ${reminder.recurrence}`,
+      'STATUS:CONFIRMED',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
+
+    try {
+      window.open(gcalUrl, '_blank');
+    } catch (e) {
+      console.error('Failed to open Google Calendar tab:', e);
+    }
+
+    try {
+      const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `pawfecto_reminder_${reminder.id}.ics`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to download calendar file:', e);
+    }
   };
 
   const saveReminder = (e) => {
@@ -692,6 +771,13 @@ export function AppProvider({ children }) {
       setReminders([...reminders, reminderData]);
       showFeedback('Reminder scheduled!');
     }
+
+    if (reminderForm.addToCalendar) {
+      const pet = pets.find(p => p.id === reminderData.petId);
+      const petName = pet ? pet.name : 'your pet';
+      addToSystemCalendar(reminderData, petName);
+    }
+
     setShowReminderModal(false);
   };
 
@@ -1207,7 +1293,7 @@ export function AppProvider({ children }) {
       // Methods / Handlers
       openAddPet, openEditPet, savePet, deletePet,
       openAddExpense, openEditExpense, saveExpense, adjustExpense, deleteExpense,
-      openAddReminder, saveReminder, toggleReminderCompleted, deleteReminder,
+      openAddReminder, saveReminder, toggleReminderCompleted, deleteReminder, addToSystemCalendar,
       openAddWeight, openEditWeight, saveWeight, adjustWeight, deleteWeightLog,
       openAddVaccine, openEditVaccine, saveVaccine, deleteVaccine,
       exportBackup, importBackup, resetToFactory,
